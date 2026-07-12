@@ -342,11 +342,11 @@ Total operational cost consists of:
 
 Fuel Cost
 
-+
+-
 
 Maintenance Cost
 
-+
+-
 
 Other Operational Expenses
 
@@ -488,11 +488,10 @@ A typical operational workflow is as follows:
 3. Create a transport trip.
 
 4. Validate:
-
-   - Vehicle availability
-   - Driver availability
-   - Driver license validity
-   - Cargo capacity
+    - Vehicle availability
+    - Driver availability
+    - Driver license validity
+    - Cargo capacity
 
 5. Dispatch the trip.
 
@@ -585,6 +584,22 @@ The final application must include:
 - Reports & Analytics
 
 ---
+
+# Role Permission
+
+| Module      | Fleet Manager | Dispatcher | Safety Officer | Financial Analyst |
+| ----------- | :-----------: | :--------: | :------------: | :---------------: |
+| Dashboard   |      ✅       |     ✅     |       ✅       |        ✅         |
+| Vehicles    |     CRUD      |    View    |      View      |       View        |
+| Drivers     |     View      |    View    |      CRUD      |       View        |
+| Trips       |     View      |    CRUD    |      View      |       View        |
+| Maintenance |     CRUD      |    View    |      View      |       View        |
+| Fuel Logs   |     View      |    View    |      View      |       CRUD        |
+| Expenses    |     View      |    View    |      View      |       CRUD        |
+| Analytics   |      ✅       |    View    |      View      |        ✅         |
+| Settings    |      ✅       |     ❌     |       ❌       |        ❌         |
+
+> admin assign people to these roles
 
 # Bonus Features
 

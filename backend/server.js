@@ -1,8 +1,9 @@
 import cookieParser from "cookie-parser";
 import express from "express"
 import connectDB from "./config/db.js";
-import cors from "cors"
-import router from "./routes/authRoutes.js";
+import cors from "cors";
+import authRoutes from "./routes/authRoutes.js";
+import adminRoutes from "./routes/admin.routes.js";
 
 const app = express();
 
@@ -16,7 +17,8 @@ app.use(cookieParser());
 
 connectDB();
 
-app.use("/api/auth",router);
+app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
 
 app.get("/",(req , res)=>{
     res.json({
