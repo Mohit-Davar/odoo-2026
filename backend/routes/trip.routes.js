@@ -1,11 +1,11 @@
 import express from "express";
-import { 
-    createDraftTrip, 
-    dispatchTrip, 
-    completeTrip, 
-    cancelTrip, 
-    listTrips, 
-    fetchTripById 
+import {
+    createDraftTrip,
+    dispatchTrip,
+    completeTrip,
+    cancelTrip,
+    listTrips,
+    fetchTripById
 } from "../controllers/trip.controller.js";
 
 import { verifyAccessToken } from "../middleware/auth.js";

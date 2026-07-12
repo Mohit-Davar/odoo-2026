@@ -6,72 +6,44 @@ import {
     updateVehicle,
     deleteVehicle
 } from "../models/vehicle.model.js";
+import { registerVehicleSchema, updateVehicleSchema } from "../schemas/vehicle.schema.js";
+import { idParamSchema } from "../schemas/generic.schema.js";
 
 /**
- * Registers a new vehicle in the system
+ * @typedef {import('zod').infer<typeof registerVehicleSchema>} RegisterVehicleBody
+ * @typedef {import('express').Request<{}, {}, RegisterVehicleBody>} RegisterVehicleRequest
+ * @typedef {import('express').Response} RegisterVehicleResponse
+ */
+
+/**
+ * Registers a new vehicle in the system.
+ * @param {RegisterVehicleRequest} req The Express request object, containing vehicle details in the body.
+ * @param {RegisterVehicleResponse} res The Express response object.
+ * @returns {Promise<void | RegisterVehicleResponse>}
  */
 export const registerVehicle = async (req, res) => {
+    const validation = registerVehicleSchema.safeParse(req.body);
+    if (!validation.success) {
+        return res.status(400).json({ errors: validation.error.format() });
+    }
+    const vehicleData = validation.data;
+
     try {
-        const {
-            registrationNumber,
-            vehicleName,
-            vehicleType,
-            maxLoadCapacityKg,
-            odometerKm,
-            acquisitionCost,
-            status
-        } = req.body;
-
-        // Thorough validation checks
-        if (!registrationNumber || typeof registrationNumber !== 'string' || !registrationNumber.trim()) {
-            return res.status(400).json({ msg: "registrationNumber must be a non-empty string." });
-        }
-        if (!vehicleName || typeof vehicleName !== 'string' || !vehicleName.trim()) {
-            return res.status(400).json({ msg: "vehicleName must be a non-empty string." });
-        }
-        if (!vehicleType || typeof vehicleType !== 'string' || !vehicleType.trim()) {
-            return res.status(400).json({ msg: "vehicleType must be a non-empty string." });
-        }
-        if (maxLoadCapacityKg === undefined || maxLoadCapacityKg === null || typeof maxLoadCapacityKg !== 'number' || isNaN(maxLoadCapacityKg) || maxLoadCapacityKg <= 0) {
-            return res.status(400).json({ msg: "maxLoadCapacityKg must be a positive number." });
-        }
-        if (acquisitionCost === undefined || acquisitionCost === null || typeof acquisitionCost !== 'number' || isNaN(acquisitionCost) || acquisitionCost < 0) {
-            return res.status(400).json({ msg: "acquisitionCost must be a non-negative number." });
-        }
-        if (odometerKm !== undefined && odometerKm !== null && (typeof odometerKm !== 'number' || isNaN(odometerKm) || odometerKm < 0)) {
-            return res.status(400).json({ msg: "odometerKm must be a non-negative number." });
-        }
-        
-        const validStatuses = ['AVAILABLE', 'ON_TRIP', 'IN_SHOP', 'RETIRED'];
-        const formattedStatus = status ? status.toUpperCase() : 'AVAILABLE';
-        if (status && !validStatuses.includes(formattedStatus)) {
-            return res.status(400).json({ msg: `status must be one of: ${validStatuses.join(', ')}` });
-        }
-
-        // Check if registration number already exists
-        const existingVehicle = await findVehicleByRegistrationNumber(registrationNumber);
+        const existingVehicle = await findVehicleByRegistrationNumber(vehicleData.registrationNumber);
         if (existingVehicle) {
             return res.status(400).json({
-                msg: `A vehicle with registration number '${registrationNumber}' is already registered.`
+                msg: `A vehicle with registration number '${vehicleData.registrationNumber}' is already registered.`
             });
         }
 
-        const newVehicle = await createVehicle({
-            registrationNumber,
-            vehicleName,
-            vehicleType,
-            maxLoadCapacityKg,
-            odometerKm,
-            acquisitionCost,
-            status: formattedStatus
-        });
+        const newVehicle = await createVehicle(vehicleData);
 
-        res.status(201).json({
+        return res.status(201).json({
             msg: "Vehicle registered successfully.",
             vehicle: newVehicle
         });
     } catch (error) {
-        res.status(500).json({
+        return res.status(500).json({
             msg: "Error registering vehicle.",
             error: error.message
         });
@@ -79,14 +51,22 @@ export const registerVehicle = async (req, res) => {
 };
 
 /**
- * Retrieves all registered vehicles
+ * @typedef {import('express').Request} GetVehiclesRequest
+ * @typedef {import('express').Response} GetVehiclesResponse
+ */
+
+/**
+ * Retrieves all registered vehicles.
+ * @param {GetVehiclesRequest} req The Express request object.
+ * @param {GetVehiclesResponse} res The Express response object.
+ * @returns {Promise<GetVehiclesResponse>}
  */
 export const getVehicles = async (req, res) => {
     try {
         const vehicles = await getAllVehicles();
-        res.status(200).json(vehicles);
+        return res.status(200).json(vehicles);
     } catch (error) {
-        res.status(500).json({
+        return res.status(500).json({
             msg: "Error fetching vehicles list.",
             error: error.message
         });
@@ -94,20 +74,34 @@ export const getVehicles = async (req, res) => {
 };
 
 /**
- * Retrieves a single vehicle details by ID
+ * @typedef {import('zod').infer<typeof idParamSchema>} GetVehicleDetailParams
+ * @typedef {import('express').Request<GetVehicleDetailParams>} GetVehicleDetailRequest
+ * @typedef {import('express').Response} GetVehicleDetailResponse
+ */
+
+/**
+ * Retrieves a single vehicle's details by its ID.
+ * @param {GetVehicleDetailRequest} req The Express request object, containing the vehicle ID in params.
+ * @param {GetVehicleDetailResponse} res The Express response object.
+ * @returns {Promise<void | GetVehicleDetailResponse>}
  */
 export const getVehicleDetail = async (req, res) => {
+    const validation = idParamSchema.safeParse(req.params);
+    if (!validation.success) {
+        return res.status(400).json({ errors: validation.error.format() });
+    }
+    const { id } = validation.data;
+
     try {
-        const { id } = req.params;
         const vehicle = await findVehicleById(id);
         if (!vehicle) {
             return res.status(404).json({
                 msg: "Vehicle not found."
             });
         }
-        res.status(200).json(vehicle);
+        return res.status(200).json(vehicle);
     } catch (error) {
-        res.status(500).json({
+        return res.status(500).json({
             msg: "Error retrieving vehicle details.",
             error: error.message
         });
@@ -115,11 +109,32 @@ export const getVehicleDetail = async (req, res) => {
 };
 
 /**
- * Updates an existing vehicle's details
+ * @typedef {import('zod').infer<typeof idParamSchema>} UpdateVehicleParams
+ * @typedef {import('zod').infer<typeof updateVehicleSchema>} UpdateVehicleBody
+ * @typedef {import('express').Request<UpdateVehicleParams, {}, UpdateVehicleBody>} UpdateVehicleRequest
+ * @typedef {import('express').Response} UpdateVehicleResponse
+ */
+
+/**
+ * Updates an existing vehicle's details.
+ * @param {UpdateVehicleRequest} req The Express request object, containing the vehicle ID in params and updated details in the body.
+ * @param {UpdateVehicleResponse} res The Express response object.
+ * @returns {Promise<void | UpdateVehicleResponse>}
  */
 export const updateVehicleDetails = async (req, res) => {
+    const paramsValidation = idParamSchema.safeParse(req.params);
+    if (!paramsValidation.success) {
+        return res.status(400).json({ errors: paramsValidation.error.format() });
+    }
+    const { id } = paramsValidation.data;
+
+    const bodyValidation = updateVehicleSchema.safeParse(req.body);
+    if (!bodyValidation.success) {
+        return res.status(400).json({ errors: bodyValidation.error.format() });
+    }
+    const updateData = bodyValidation.data;
+
     try {
-        const { id } = req.params;
         const existingVehicle = await findVehicleById(id);
         if (!existingVehicle) {
             return res.status(404).json({
@@ -127,76 +142,23 @@ export const updateVehicleDetails = async (req, res) => {
             });
         }
 
-        const {
-            registrationNumber,
-            vehicleName,
-            vehicleType,
-            maxLoadCapacityKg,
-            odometerKm,
-            acquisitionCost,
-            status
-        } = req.body;
-
-        // Validation for update payload
-        if (registrationNumber !== undefined && (typeof registrationNumber !== 'string' || !registrationNumber.trim())) {
-            return res.status(400).json({ msg: "registrationNumber must be a non-empty string." });
-        }
-        if (vehicleName !== undefined && (typeof vehicleName !== 'string' || !vehicleName.trim())) {
-            return res.status(400).json({ msg: "vehicleName must be a non-empty string." });
-        }
-        if (vehicleType !== undefined && (typeof vehicleType !== 'string' || !vehicleType.trim())) {
-            return res.status(400).json({ msg: "vehicleType must be a non-empty string." });
-        }
-        if (maxLoadCapacityKg !== undefined && (typeof maxLoadCapacityKg !== 'number' || isNaN(maxLoadCapacityKg) || maxLoadCapacityKg <= 0)) {
-            return res.status(400).json({ msg: "maxLoadCapacityKg must be a positive number." });
-        }
-        if (acquisitionCost !== undefined && (typeof acquisitionCost !== 'number' || isNaN(acquisitionCost) || acquisitionCost < 0)) {
-            return res.status(400).json({ msg: "acquisitionCost must be a non-negative number." });
-        }
-        if (odometerKm !== undefined && (typeof odometerKm !== 'number' || isNaN(odometerKm) || odometerKm < 0)) {
-            return res.status(400).json({ msg: "odometerKm must be a non-negative number." });
-        }
-        
-        const validStatuses = ['AVAILABLE', 'ON_TRIP', 'IN_SHOP', 'RETIRED'];
-        const formattedStatus = status ? status.toUpperCase() : undefined;
-        if (status !== undefined && (!formattedStatus || !validStatuses.includes(formattedStatus))) {
-            return res.status(400).json({ msg: `status must be one of: ${validStatuses.join(', ')}` });
-        }
-
-        const updatedRegNumber = registrationNumber ? registrationNumber.trim() : existingVehicle.registrationNumber;
-        const updatedVehicleName = vehicleName ? vehicleName.trim() : existingVehicle.vehicleName;
-        const updatedVehicleType = vehicleType ? vehicleType.trim() : existingVehicle.vehicleType;
-        const updatedMaxLoad = maxLoadCapacityKg !== undefined ? maxLoadCapacityKg : existingVehicle.maxLoadCapacityKg;
-        const updatedOdometer = odometerKm !== undefined ? odometerKm : existingVehicle.odometerKm;
-        const updatedCost = acquisitionCost !== undefined ? acquisitionCost : existingVehicle.acquisitionCost;
-        const updatedStatus = formattedStatus || existingVehicle.status;
-
-        // Check if the registration number changed and is already taken by another vehicle
-        if (registrationNumber && registrationNumber !== existingVehicle.registrationNumber) {
-            const taken = await findVehicleByRegistrationNumber(registrationNumber);
+        if (updateData.registrationNumber && updateData.registrationNumber !== existingVehicle.registrationNumber) {
+            const taken = await findVehicleByRegistrationNumber(updateData.registrationNumber);
             if (taken) {
                 return res.status(400).json({
-                    msg: `Registration number '${registrationNumber}' is already registered to another vehicle.`
+                    msg: `Registration number '${updateData.registrationNumber}' is already registered to another vehicle.`
                 });
             }
         }
 
-        const updated = await updateVehicle(id, {
-            registrationNumber: updatedRegNumber,
-            vehicleName: updatedVehicleName,
-            vehicleType: updatedVehicleType,
-            maxLoadCapacityKg: updatedMaxLoad,
-            odometerKm: updatedOdometer,
-            acquisitionCost: updatedCost,
-            status: updatedStatus
-        });
+        const updated = await updateVehicle(id, { ...existingVehicle, ...updateData });
 
-        res.status(200).json({
+        return res.status(200).json({
             msg: "Vehicle details updated successfully.",
             vehicle: updated
         });
     } catch (error) {
-        res.status(500).json({
+        return res.status(500).json({
             msg: "Error updating vehicle details.",
             error: error.message
         });
@@ -204,22 +166,36 @@ export const updateVehicleDetails = async (req, res) => {
 };
 
 /**
- * Deletes a vehicle by its ID
+ * @typedef {import('zod').infer<typeof idParamSchema>} DeleteVehicleParams
+ * @typedef {import('express').Request<DeleteVehicleParams>} DeleteVehicleRequest
+ * @typedef {import('express').Response} DeleteVehicleResponse
+ */
+
+/**
+ * Deletes a vehicle by its ID.
+ * @param {DeleteVehicleRequest} req The Express request object, containing the vehicle ID in params.
+ * @param {DeleteVehicleResponse} res The Express response object.
+ * @returns {Promise<void | DeleteVehicleResponse>}
  */
 export const deleteVehicleRecord = async (req, res) => {
+    const validation = idParamSchema.safeParse(req.params);
+    if (!validation.success) {
+        return res.status(400).json({ errors: validation.error.format() });
+    }
+    const { id } = validation.data;
+
     try {
-        const { id } = req.params;
         const deleted = await deleteVehicle(id);
         if (!deleted) {
             return res.status(404).json({
                 msg: "Vehicle not found."
             });
         }
-        res.status(200).json({
+        return res.status(200).json({
             msg: "Vehicle deleted successfully."
         });
     } catch (error) {
-        res.status(500).json({
+        return res.status(500).json({
             msg: "Error deleting vehicle.",
             error: error.message
         });
