@@ -2,8 +2,10 @@ import cookieParser from "cookie-parser";
 import express from "express"
 import connectDB from "./config/db.js";
 import cors from "cors";
-import authRoutes from "./routes/authRoutes.js";
+import router from "./routes/auth.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
+import vehicleRouter from "./routes/vehicle.route.js";
+import driverRouter from "./routes/driver.route.js";
 
 const app = express();
 
@@ -19,6 +21,7 @@ connectDB();
 
 app.use("/api/auth", router);
 app.use("/api/vehicles", vehicleRouter);
+app.use("/api/drivers", driverRouter);
 app.use("/api/admin", adminRoutes);
 
 app.get("/",(req , res)=>{
