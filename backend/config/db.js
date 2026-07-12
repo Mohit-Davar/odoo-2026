@@ -16,24 +16,8 @@ const connectDB = async () => {
     try {
         await pool.query("SELECT NOW()");
         console.log("PostgreSQL DB connected successfully.");
-
-        // Migration query
-        const migrationQuery = `
-            CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                name VARCHAR(255) NOT NULL,
-                email VARCHAR(255) NOT NULL UNIQUE,
-                password VARCHAR(255) NOT NULL,
-                refresh_token VARCHAR(255),
-                verified BOOLEAN DEFAULT FALSE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        `;
-        await pool.query(migrationQuery);
-        console.log("Database migrations applied.");
     } catch (error) {
-        console.error("Database connection/migration error:", error);
+        console.error("Database connection error:", error);
         process.exit(1);
     }
 };
