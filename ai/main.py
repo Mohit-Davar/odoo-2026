@@ -4,8 +4,11 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
-import google.generativeai as genai
 from dotenv import load_dotenv
+
+# LangChain Imports
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 
 # Import tools and the executor
 from tools import ALL_TOOLS
@@ -14,16 +17,24 @@ from mcp_server import execute_tool
 # Load environment variables
 load_dotenv()
 
-# Configure Gemini API
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-    # Register our MCP tools directly with the model
-    model = genai.GenerativeModel('gemini-1.5-flash', tools=ALL_TOOLS)
-else:
-    model = None
+# Configure OpenAI client via LangChain
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
-app = FastAPI(title="TransitOps AI Service", version="1.0.0")
+if OPENAI_API_KEY:
+    # Initialize the LangChain ChatOpenAI LLM
+    llm = ChatOpenAI(
+        model=OPENAI_MODEL,
+        openai_api_key=OPENAI_API_KEY,
+        temperature=0.0
+    )
+    # Bind our 10 MCP tools to the LLM
+    llm_with_tools = llm.bind_tools(ALL_TOOLS)
+else:
+    llm = None
+    llm_with_tools = None
+
+app = FastAPI(title="TransitOps AI Service (LangChain)", version="1.0.0")
 
 # Enable CORS for frontend connectivity
 app.add_middleware(
@@ -46,61 +57,86 @@ class OptimizationRequest(BaseModel):
 @app.get("/")
 def read_root():
     return {
-        "status": "TransitOps AI Server is running", 
-        "gemini_enabled": model is not None,
-        "tools_registered": [t.__name__ for t in ALL_TOOLS]
+        "status": "TransitOps AI Server is running (LangChain mode)", 
+        "openai_enabled": llm is not None,
+        "openai_model": OPENAI_MODEL,
+        "tools_registered": [t.name for t in ALL_TOOLS]
     }
 
 @app.post("/api/ai/chat")
 async def chat(request: ChatRequest):
-    if not model:
+    if not llm_with_tools:
         return {
-            "reply": "AI service is running in mock mode. Set GEMINI_API_KEY in 'ai/.env' to activate the live model.",
+            "reply": "AI service is running in mock mode. Set OPENAI_API_KEY in 'ai/.env' to activate the live model.",
             "mock": True
         }
     
     try:
-        # Map conversation history to Gemini structure
-        history = []
+        # 1. Map history to LangChain messages list
+        messages = []
+        
+        # Add system context instructions
+        messages.append(
+            HumanMessage(
+                content=(
+                    "System: You are an expert logistics assistant for TransitOps, a smart fleet management platform. "
+                    "Help the user analyze route logs, check vehicle availability, and schedule drivers. "
+                    "Use your tools to query the current state of the fleet whenever needed. "
+                    "Answer questions factually using the tool responses."
+                )
+            )
+        )
+        
         for turn in request.history:
             role = turn.get("role", "user")
             content = turn.get("content", "")
-            gemini_role = "model" if role == "assistant" else "user"
-            history.append({"role": gemini_role, "parts": [content]})
-            
-        # Start the chat session
-        chat_session = model.start_chat(history=history)
+            if role == "assistant":
+                messages.append(AIMessage(content=content))
+            else:
+                messages.append(HumanMessage(content=content))
+                
+        # Add current user query
+        messages.append(HumanMessage(content=request.message))
         
-        # Send user query
-        response = chat_session.send_message(request.message)
-        
-        # Handle iterative tool calling loops
+        # 2. Run the iterative tool execution loop (up to 10 steps)
         loop_count = 0
-        while response.function_calls and loop_count < 10:
+        while loop_count < 10:
             loop_count += 1
-            for call in response.function_calls:
-                tool_name = call.name
-                tool_args = dict(call.args)
+            
+            # Invoke the LLM with current messages thread
+            response = await llm_with_tools.ainvoke(messages)
+            
+            # If no tool calls are generated, we have our final answer
+            if not response.tool_calls:
+                return {
+                    "reply": response.content,
+                    "mock": False
+                }
                 
-                print(f"[AI Agent] Gemini called tool: {tool_name} with args: {tool_args}")
+            # Append the assistant's tool-call response to messages thread
+            messages.append(response)
+            
+            # Execute each requested tool call
+            for tool_call in response.tool_calls:
+                name = tool_call["name"]
+                args = tool_call["args"]
+                tool_call_id = tool_call["id"]
                 
-                # Execute the matched tool
-                result_json = await execute_tool(tool_name, tool_args)
+                print(f"[AI Agent] LangChain/OpenAI called tool: {name} with args: {args}")
                 
-                # Send tool output back to the model context
-                response = chat_session.send_message(
-                    genai.protos.Part(
-                        function_response=genai.protos.FunctionResponse(
-                            name=tool_name,
-                            response={'result': result_json}
-                        )
+                # Execute the tool via our MCP router
+                result_json = await execute_tool(name, args)
+                
+                # Append ToolMessage response to continue the conversation
+                messages.append(
+                    ToolMessage(
+                        content=result_json,
+                        tool_call_id=tool_call_id,
+                        name=name
                     )
                 )
                 
-        return {
-            "reply": response.text,
-            "mock": False
-        }
+        raise HTTPException(status_code=500, detail="AI Agent exceeded tool calling limit without resolving a response.")
         
     except Exception as e:
         print(f"[AI Agent] Chat Error: {str(e)}")
@@ -108,8 +144,8 @@ async def chat(request: ChatRequest):
 
 @app.post("/api/ai/optimize-dispatch")
 async def optimize_dispatch(request: OptimizationRequest):
-    # Keep optimization endpoint separate for custom batch calls
-    if not model:
+    # Fallback to smart logic if no live LLM configured
+    if not llm:
         assignments = []
         for i, trip in enumerate(request.trips):
             vehicle = request.vehicles[i % len(request.vehicles)] if request.vehicles else {"id": "None", "registrationNumber": "N/A"}
@@ -122,7 +158,7 @@ async def optimize_dispatch(request: OptimizationRequest):
                 "assignedVehicleName": vehicle.get("vehicleName", "N/A"),
                 "assignedDriverId": driver.get("id"),
                 "assignedDriverName": driver.get("fullName", "N/A"),
-                "recommendationReason": "Round-robin matching (Mock Mode - set GEMINI_API_KEY for dynamic AI matching)."
+                "recommendationReason": "Round-robin matching (Mock Mode - set OPENAI_API_KEY for dynamic AI matching)."
             })
         return {"assignments": assignments, "mock": True}
         
@@ -155,8 +191,8 @@ async def optimize_dispatch(request: OptimizationRequest):
             ]
         }}
         """
-        response = model.generate_content(prompt)
-        text = response.text.strip()
+        response = await llm.ainvoke(prompt)
+        text = response.content.strip()
         
         if text.startswith("```json"):
             text = text[7:]
