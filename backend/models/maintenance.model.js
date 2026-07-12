@@ -1,7 +1,9 @@
 import { pool } from "../config/db.js";
 
 /**
- * Helper to transform raw PostgreSQL snake_case rows into standard camelCase objects
+ * Transforms a raw PostgreSQL maintenance log row into a camelCase object.
+ * @param {object} row - The raw row object from the database.
+ * @returns {object | null} A camelCase maintenance log object or null if input is falsy.
  */
 function parseMaintenanceRow(row) {
     if (!row) return null;
@@ -17,6 +19,11 @@ function parseMaintenanceRow(row) {
     };
 }
 
+/**
+ * Retrieves a single maintenance log by its unique ID.
+ * @param {number | string} id - The ID of the maintenance log to retrieve.
+ * @returns {Promise<object | null>} A promise that resolves to the maintenance log object or null if not found.
+ */
 export async function findMaintenanceById(id) {
     const sql = `
         SELECT id, vehicle_id, description, cost, maintenance_date, status, created_at, updated_at
@@ -28,6 +35,10 @@ export async function findMaintenanceById(id) {
     return parseMaintenanceRow(rows[0]);
 }
 
+/**
+ * Retrieves all maintenance logs from the database, ordered by creation date.
+ * @returns {Promise<object[]>} A promise that resolves to an array of maintenance log objects.
+ */
 export async function getAllMaintenanceLogs() {
     const sql = `
         SELECT id, vehicle_id, description, cost, maintenance_date, status, created_at, updated_at
@@ -38,6 +49,13 @@ export async function getAllMaintenanceLogs() {
     return rows.map(parseMaintenanceRow);
 }
 
+/**
+ * Creates a new maintenance log and updates the corresponding vehicle's status within a transaction.
+ * If the log status is 'ACTIVE', the vehicle status is set to 'IN_SHOP'.
+ * @param {object} data - The data for the new maintenance log.
+ * @returns {Promise<object>} A promise that resolves to the newly created maintenance log object.
+ * @throws Will throw an error if the transaction fails.
+ */
 export async function createMaintenanceLog(data) {
     const client = await pool.connect();
     try {
@@ -78,6 +96,14 @@ export async function createMaintenanceLog(data) {
     }
 }
 
+/**
+ * Updates an existing maintenance log and adjusts the vehicle's status accordingly within a transaction.
+ * e.g., sets vehicle to 'AVAILABLE' if maintenance is 'COMPLETED'.
+ * @param {number | string} id - The ID of the maintenance log to update.
+ * @param {object} data - An object containing the fields to update.
+ * @returns {Promise<object | null>} A promise that resolves to the updated maintenance log object or null if not found.
+ * @throws Will throw an error if the transaction fails.
+ */
 export async function updateMaintenanceLog(id, data) {
     const client = await pool.connect();
     try {
@@ -131,6 +157,12 @@ export async function updateMaintenanceLog(id, data) {
     }
 }
 
+/**
+ * Deletes a maintenance log by its ID and reverts vehicle status if necessary, within a transaction.
+ * @param {number | string} id - The ID of the maintenance log to delete.
+ * @returns {Promise<boolean>} A promise that resolves to true if a row was deleted, false otherwise.
+ * @throws Will throw an error if the transaction fails.
+ */
 export async function deleteMaintenanceLog(id) {
     const client = await pool.connect();
     try {

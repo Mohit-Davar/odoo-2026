@@ -10,7 +10,16 @@ import { registerMaintenanceSchema, updateMaintenanceSchema } from "../schemas/m
 import { idParamSchema } from "../schemas/generic.schema.js";
 
 /**
- * Creates a new maintenance log
+ * @typedef {import('zod').infer<typeof registerMaintenanceSchema>} RegisterMaintenanceBody
+ * @typedef {import('express').Request<{}, {}, RegisterMaintenanceBody>} RegisterMaintenanceRequest
+ * @typedef {import('express').Response} RegisterMaintenanceResponse
+ */
+
+/**
+ * Creates a new maintenance log.
+ * @param {RegisterMaintenanceRequest} req - The Express request object.
+ * @param {RegisterMaintenanceResponse} res - The Express response object.
+ * @returns {Promise<void | RegisterMaintenanceResponse>}
  */
 export const registerMaintenance = async (req, res) => {
     const validation = registerMaintenanceSchema.safeParse(req.body);
@@ -43,7 +52,15 @@ export const registerMaintenance = async (req, res) => {
 };
 
 /**
- * Retrieves all maintenance logs
+ * @typedef {import('express').Request} GetMaintenanceLogsRequest
+ * @typedef {import('express').Response} GetMaintenanceLogsResponse
+ */
+
+/**
+ * Retrieves all maintenance logs.
+ * @param {GetMaintenanceLogsRequest} req - The Express request object.
+ * @param {GetMaintenanceLogsResponse} res - The Express response object.
+ * @returns {Promise<GetMaintenanceLogsResponse>}
  */
 export const getMaintenanceLogs = async (req, res) => {
     try {
@@ -58,7 +75,16 @@ export const getMaintenanceLogs = async (req, res) => {
 };
 
 /**
- * Retrieves a single maintenance log by ID
+ * @typedef {import('zod').infer<typeof idParamSchema>} GetMaintenanceDetailParams
+ * @typedef {import('express').Request<GetMaintenanceDetailParams>} GetMaintenanceDetailRequest
+ * @typedef {import('express').Response} GetMaintenanceDetailResponse
+ */
+
+/**
+ * Retrieves a single maintenance log by ID.
+ * @param {GetMaintenanceDetailRequest} req - The Express request object.
+ * @param {GetMaintenanceDetailResponse} res - The Express response object.
+ * @returns {Promise<void | GetMaintenanceDetailResponse>}
  */
 export const getMaintenanceDetail = async (req, res) => {
     const validation = idParamSchema.safeParse(req.params);
@@ -82,7 +108,17 @@ export const getMaintenanceDetail = async (req, res) => {
 };
 
 /**
- * Updates a maintenance log
+ * @typedef {import('zod').infer<typeof idParamSchema>} UpdateMaintenanceParams
+ * @typedef {import('zod').infer<typeof updateMaintenanceSchema>} UpdateMaintenanceBody
+ * @typedef {import('express').Request<UpdateMaintenanceParams, {}, UpdateMaintenanceBody>} UpdateMaintenanceRequest
+ * @typedef {import('express').Response} UpdateMaintenanceResponse
+ */
+
+/**
+ * Updates a maintenance log.
+ * @param {UpdateMaintenanceRequest} req - The Express request object.
+ * @param {UpdateMaintenanceResponse} res - The Express response object.
+ * @returns {Promise<void | UpdateMaintenanceResponse>}
  */
 export const updateMaintenanceDetails = async (req, res) => {
     const paramsValidation = idParamSchema.safeParse(req.params);
@@ -125,7 +161,16 @@ export const updateMaintenanceDetails = async (req, res) => {
 };
 
 /**
- * Deletes a maintenance log
+ * @typedef {import('zod').infer<typeof idParamSchema>} DeleteMaintenanceParams
+ * @typedef {import('express').Request<DeleteMaintenanceParams>} DeleteMaintenanceRequest
+ * @typedef {import('express').Response} DeleteMaintenanceResponse
+ */
+
+/**
+ * Deletes a maintenance log.
+ * @param {DeleteMaintenanceRequest} req - The Express request object.
+ * @param {DeleteMaintenanceResponse} res - The Express response object.
+ * @returns {Promise<void | DeleteMaintenanceResponse>}
  */
 export const deleteMaintenanceRecord = async (req, res) => {
     const validation = idParamSchema.safeParse(req.params);

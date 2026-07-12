@@ -1,19 +1,20 @@
 import { z } from 'zod';
 
-const maintenanceStatusEnum = z.enum(['ACTIVE', 'COMPLETED']);
+const maintenanceStatusEnum = z.enum(['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']);
 
 /**
- * Schema for registering a new maintenance log.
+ * Schema for creating a new maintenance log.
  */
 export const registerMaintenanceSchema = z.object({
-    vehicleId: z.coerce.number().int().positive("Vehicle ID must be a positive integer."),
-    description: z.string().min(1, "Description is required."),
-    cost: z.number().min(0, "Cost must be non-negative."),
-    maintenanceDate: z.coerce.date({ message: "Invalid date format for maintenance date." }),
-    status: maintenanceStatusEnum.default('ACTIVE'),
+    vehicleId: z.number().int().positive(),
+    maintenanceType: z.string().min(1, "Maintenance type is required."),
+    description: z.string().optional(),
+    cost: z.number().nonnegative(),
+    maintenanceDate: z.coerce.date(),
+    status: maintenanceStatusEnum.default('SCHEDULED'),
 });
 
 /**
- * Schema for updating a maintenance log's details. All fields are optional.
+ * Schema for updating a maintenance log. All fields are optional.
  */
 export const updateMaintenanceSchema = registerMaintenanceSchema.partial();
