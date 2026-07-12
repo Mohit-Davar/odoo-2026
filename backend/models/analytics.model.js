@@ -117,11 +117,8 @@ export async function getOperationalCost() {
 }
 
 /**
- * Calculates the Return on Investment (ROI) for each vehicle.
- * As revenue is not tracked, this function currently returns only the cost side of the equation.
- * The 'revenue' and 'roi' fields are returned as null to be populated by the frontend if data is available.
- * @returns {Promise<object[]>} A promise that resolves to an array of vehicle ROI objects,
- * detailing acquisition cost, total fuel and maintenance costs, and completed trips.
+ * Vehicle ROI per vehicle:
+ * ROI = (revenue - fuel_cost - maint_cost) / acquisition_cost
  */
 export async function getVehicleROI() {
     const sql = `
@@ -133,7 +130,8 @@ export async function getVehicleROI() {
             v.acquisition_cost,
             COALESCE(SUM(fl.total_cost), 0)   AS total_fuel_cost,
             COALESCE(SUM(ml.cost), 0)          AS total_maintenance_cost,
-            COUNT(DISTINCT t.id)               AS completed_trips
+            COUNT(DISTINCT t.id)               AS completed_trips,
+            COALESCE(SUM(t.revenue), 0)        AS total_revenue
         FROM vehicles v
         LEFT JOIN fuel_logs       fl ON fl.vehicle_id = v.id
         LEFT JOIN maintenance_logs ml ON ml.vehicle_id = v.id
@@ -147,6 +145,11 @@ export async function getVehicleROI() {
         const fuelCost = parseFloat(r.total_fuel_cost);
         const maintCost = parseFloat(r.total_maintenance_cost);
         const totalCost = fuelCost + maintCost;
+        const totalRevenue = parseFloat(r.total_revenue);
+        const roi = acquisitionCost > 0 
+            ? parseFloat(((totalRevenue - totalCost) / acquisitionCost * 100).toFixed(2)) 
+            : 0;
+
         return {
             vehicleId: r.id,
             registrationNumber: r.registration_number,
@@ -157,9 +160,8 @@ export async function getVehicleROI() {
             totalMaintenanceCost: maintCost,
             totalCost: parseFloat(totalCost.toFixed(2)),
             completedTrips: parseInt(r.completed_trips, 10),
-            // Revenue not tracked in schema — frontend can overlay when available
-            revenue: null,
-            roi: null
+            revenue: totalRevenue,
+            roi: roi
         };
     });
 }
