@@ -24,9 +24,9 @@ export const requireRoles = (allowedRoles) => {
             if (rows.length === 0) {
                 return res.status(403).json({ msg: "Role not found" });
             }
-            const userRole = rows[0].name; // e.g. "Fleet Manager", "Dispatcher", "Admin"
+            const userRole = rows[0].name; // e.g. "FLEET_MANAGER", "DISPATCHER", "ADMIN"
             // Admin always has access Or only allowed roles
-            if (userRole === "Admin" || allowedRoles.includes(userRole)) {
+            if (userRole === "ADMIN" || allowedRoles.includes(userRole)) {
                 // Attach role name to request for convenience
                 req.user.roleName = userRole;
                 next();
