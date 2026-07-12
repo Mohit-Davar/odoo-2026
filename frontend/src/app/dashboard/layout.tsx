@@ -6,6 +6,7 @@ import { useEffect, useRef } from "react";
 import { useAppStore } from "@/store/useAppStore";
 import { useAuthStore, waitForSession } from "../../../store/authstore";
 import { WaveLoader } from "@/components/ui/wave-loader";
+import ChatWidget from "@/components/ChatWidget";
 
 export default function DashboardLayout({
   children,
@@ -55,6 +56,8 @@ export default function DashboardLayout({
           {children}
         </main>
       </div>
+
+      <ChatWidget />
     </div>
   );
 }
