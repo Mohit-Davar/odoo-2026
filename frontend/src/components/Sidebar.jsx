@@ -5,24 +5,29 @@ import { useAuthStore } from "../../store/authstore";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard,
-  CheckSquare,
+  Truck,
+  Users,
+  MapPin,
+  Wrench,
+  Fuel,
   BarChart3,
-  MessageSquare,
   Settings,
   ChevronRight,
   LogOut,
-  Upload,
-  Library,
-  Users,
 } from "lucide-react";
 import logo from "../assets/images/logo.png";
 import { useRouter, usePathname } from "next/navigation";
 
-const employeeMenuItems = [
+const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
+  { icon: Truck, label: "Fleet", href: "/dashboard/fleet" },
+  { icon: Users, label: "Drivers", href: "/dashboard/drivers" },
+  { icon: MapPin, label: "Trips", href: "/dashboard/trips" },
+  { icon: Wrench, label: "Maintenance", href: "/dashboard/maintenance" },
+  { icon: Fuel, label: "Fuel & Expenses", href: "/dashboard/fuel-expenses" },
+  { icon: BarChart3, label: "Analytics", href: "/dashboard/analytics" },
+  { icon: Settings, label: "Settings", href: "/dashboard/settings" },
 ];
-
-const hrMenuItems = [];
 
 export function Sidebar() {
   const { user, loading, logout } = useAuthStore();
@@ -33,8 +38,6 @@ export function Sidebar() {
     await logout();
     router.push("/login");
   };
-
-  const menuItems = employeeMenuItems;
 
   const getInitials = (name) => {
     if (!name) return "U";
@@ -68,7 +71,7 @@ export function Sidebar() {
         >
           <img src={logo.src} alt="Logo" className="w-6 h-6" />
           <h1 className="text-lg font-bold text-neutral-900 radio tracking-wider">
-            Odoo
+            TransitOps
           </h1>
         </div>
       </div>
