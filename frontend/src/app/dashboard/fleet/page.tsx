@@ -193,6 +193,94 @@ export default function FleetPage() {
     }
   };
 
+  // Document Management State
+  const [isDocsOpen, setIsDocsOpen] = useState(false);
+  const [selectedVehicleForDocs, setSelectedVehicleForDocs] = useState<any>(null);
+  const [vehicleDocuments, setVehicleDocuments] = useState<any[]>([]);
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+  const [docNameInput, setDocNameInput] = useState("");
+
+  const handleOpenDocuments = async (vehicle: any) => {
+    setSelectedVehicleForDocs(vehicle);
+    setVehicleDocuments([]);
+    setDocNameInput("");
+    setIsDocsOpen(true);
+    
+    try {
+      const axiosInstance = (await import('../../../lib/axiosInstance')).default;
+      const res = await axiosInstance.get(`/documents/vehicles/${vehicle.id}/documents`);
+      setVehicleDocuments(res.data || []);
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Failed to load vehicle documents");
+    }
+  };
+
+  const handleUploadDocument = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedVehicleForDocs || !docNameInput.trim()) {
+      toast.error("Please enter a document name first");
+      return;
+    }
+
+    setIsUploadingDoc(true);
+    try {
+      const axiosInstance = (await import('../../../lib/axiosInstance')).default;
+      
+      // Step 1: Request signature from backend
+      const sigRes = await axiosInstance.get('/documents/signature');
+      const { timestamp, signature } = sigRes.data;
+
+      // Step 2: Upload directly to Cloudinary
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('api_key', process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY || '');
+      formData.append('timestamp', timestamp.toString());
+      formData.append('signature', signature);
+
+      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dduaimy1r';
+      const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error('Cloudinary upload failed');
+      }
+
+      const cloudData = await uploadRes.json();
+
+      // Step 3: Register document in backend database
+      const dbRes = await axiosInstance.post(`/documents/vehicles/${selectedVehicleForDocs.id}/documents`, {
+        document_name: docNameInput,
+        file_url: cloudData.secure_url,
+        cloudinary_public_id: cloudData.public_id,
+      });
+
+      setVehicleDocuments(prev => [dbRes.data, ...prev]);
+      setDocNameInput("");
+      toast.success("Document uploaded successfully!");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to upload document");
+    } finally {
+      setIsUploadingDoc(false);
+    }
+  };
+
+  const handleDeleteDocument = async (docId: number) => {
+    if (!confirm("Are you sure you want to delete this document?")) return;
+    try {
+      const axiosInstance = (await import('../../../lib/axiosInstance')).default;
+      await axiosInstance.delete(`/documents/${docId}`);
+      setVehicleDocuments(prev => prev.filter(d => d.id !== docId));
+      toast.success("Document deleted");
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Failed to delete document");
+    }
+  };
+
   const draftTripsCount = trips.filter(t => t.status === 'DRAFT').length;
 
   return (
@@ -400,6 +488,9 @@ export default function FleetPage() {
                   <TableCell className="px-4 py-3">₹{(vehicle.acquisitionCost ?? vehicle.acquisition_cost)?.toLocaleString()}</TableCell>
                   <TableCell className="px-4 py-3">{getStatusBadge(vehicle.status)}</TableCell>
                   <TableCell className="px-4 py-3 space-x-2">
+                    <Button size="sm" variant="outline" className="text-xs h-7 border-purple-500 text-purple-600 hover:bg-purple-50" onClick={() => handleOpenDocuments(vehicle)}>
+                      Docs
+                    </Button>
                     {vehicle.status !== 'RETIRED' && (
                       <Button size="sm" variant="outline" className="text-xs h-7 border-red-500 text-red-600 hover:bg-red-50" onClick={() => handleRetire(vehicle.id)}>
                         Retire
@@ -424,6 +515,97 @@ export default function FleetPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Vehicle Document Management Modal */}
+      <Dialog open={isDocsOpen} onOpenChange={setIsDocsOpen}>
+        <DialogContent className="max-w-2xl overflow-y-auto max-h-[85vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-purple-950 font-bold text-xl">
+              📄 Document Locker for {selectedVehicleForDocs?.vehicleName || selectedVehicleForDocs?.vehicle_name || 'Vehicle'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-2">
+            {/* Upload form */}
+            <div className="p-4 bg-neutral-50 border border-neutral-200 rounded-xl space-y-3">
+              <h4 className="text-sm font-semibold text-neutral-700">Upload New Compliance File</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="docName">Document Title</Label>
+                  <Input 
+                    id="docName"
+                    value={docNameInput} 
+                    onChange={e => setDocNameInput(e.target.value)} 
+                    placeholder="e.g. Insurance, RC Book" 
+                    className="bg-white"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="fileInput">Choose File</Label>
+                  <div className="flex items-center gap-2">
+                    <Input 
+                      id="fileInput"
+                      type="file" 
+                      onChange={handleUploadDocument} 
+                      disabled={isUploadingDoc || !docNameInput.trim()}
+                      className="cursor-pointer bg-white file:text-purple-700 file:font-semibold"
+                    />
+                  </div>
+                </div>
+              </div>
+              {isUploadingDoc && (
+                <p className="text-xs text-purple-700 animate-pulse font-medium">Uploading and securing document asset via Cloudinary...</p>
+              )}
+            </div>
+
+            {/* Document list */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-neutral-700">Uploaded Compliance Files</h4>
+              <div className="border border-neutral-100 rounded-xl overflow-hidden bg-white">
+                <Table>
+                  <TableHeader className="bg-neutral-50">
+                    <TableRow>
+                      <TableHead className="py-2 text-[11px] font-bold uppercase tracking-wider">Document Name</TableHead>
+                      <TableHead className="py-2 text-[11px] font-bold uppercase tracking-wider text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {vehicleDocuments.map(doc => (
+                      <TableRow key={doc.id} className="hover:bg-neutral-50/50">
+                        <TableCell className="py-3 font-medium text-neutral-800">{doc.document_name}</TableCell>
+                        <TableCell className="py-3 text-right space-x-2">
+                          <a 
+                            href={doc.file_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg border border-neutral-200 text-xs font-semibold text-neutral-700 bg-white hover:bg-neutral-50 transition-colors"
+                          >
+                            View File
+                          </a>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleDeleteDocument(doc.id)}
+                          >
+                            Delete
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {vehicleDocuments.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={2} className="text-center py-6 text-xs text-neutral-400">
+                          No documents uploaded yet for this vehicle.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       
       <p className="text-xs text-orange-600">Rule: Registration No. must be unique • Retired/In Shop vehicles are hidden from Trip Dispatcher</p>
     </div>

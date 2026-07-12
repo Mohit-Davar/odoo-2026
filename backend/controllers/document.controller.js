@@ -1,5 +1,5 @@
 import cloudinary from 'cloudinary';
-import { addDocument, deleteDocumentById, getDocumentById } from '../models/document.model.js';
+import { addDocument, deleteDocumentById, getDocumentById, getDocumentsByVehicleId } from '../models/document.model.js';
 
 // Cloudinary SDK automatically uses the CLOUDINARY_URL environment variable.
 // We only need to force secure URLs.
@@ -61,7 +61,18 @@ export const deleteVehicleDocument = async (req, res) => {
 
         res.json({ msg: "Document deleted successfully." });
     } catch (error) {
-        console.error("Error deleting vehicle document:", error);
-        res.status(500).json({ msg: "Server error while deleting document." });
+      console.error("Error deleting vehicle document:", error);
+      res.status(500).json({ msg: "Server error while deleting document." });
+    }
+};
+
+export const getVehicleDocuments = async (req, res) => {
+    const { id: vehicle_id } = req.params;
+    try {
+        const documents = await getDocumentsByVehicleId(vehicle_id);
+        res.json(documents);
+    } catch (error) {
+        console.error("Error fetching vehicle documents:", error);
+        res.status(500).json({ msg: "Server error while fetching documents." });
     }
 };
