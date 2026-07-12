@@ -32,7 +32,7 @@ export default function FuelExpensesPage() {
   const [expDate, setExpDate] = useState("");
   const [isSubmittingExp, setIsSubmittingExp] = useState(false);
 
-  const totalFuelCost = fuelLogs.reduce((sum, log) => sum + (log.totalCost || 0), 0);
+  const totalFuelCost = fuelLogs.reduce((sum, log) => sum + (log.total_cost || 0), 0);
   const totalExpensesCost = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
   const totalOperationalCost = totalFuelCost + totalExpensesCost;
 
@@ -40,10 +40,10 @@ export default function FuelExpensesPage() {
     if (!fuelVehicleId || !fuelDate || !litres || !fuelCost) return;
     setIsSubmittingFuel(true);
     const res = await addFuelLog({
-      vehicleId: Number(fuelVehicleId),
-      fuelDate: new Date(fuelDate).toISOString(),
+      vehicle_id: Number(fuelVehicleId),
+      fuel_date: new Date(fuelDate).toISOString(),
       litres: Number(litres),
-      totalCost: Number(fuelCost)
+      total_cost: Number(fuelCost)
     });
     if (res.ok) {
       toast.success("Fuel log added");
@@ -62,10 +62,10 @@ export default function FuelExpensesPage() {
     if (!expTripId || !expType || !expAmount || !expDate) return;
     setIsSubmittingExp(true);
     const res = await addExpense({
-      tripId: Number(expTripId),
-      expenseType: expType,
+      trip_id: Number(expTripId),
+      expense_type: expType,
       amount: Number(expAmount),
-      expenseDate: new Date(expDate).toISOString(),
+      expense_date: new Date(expDate).toISOString(),
     });
     if (res.ok) {
       toast.success("Expense added");
@@ -78,6 +78,7 @@ export default function FuelExpensesPage() {
     }
     setIsSubmittingExp(false);
   };
+
 
   const handleNumKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'e' || e.key === 'E' || e.key === '-' || e.key === '+') e.preventDefault();
@@ -118,7 +119,7 @@ export default function FuelExpensesPage() {
                         </SelectTrigger>
                         <SelectContent>
                           {vehicles.map(v => (
-                            <SelectItem key={v.id} value={v.id.toString()}>{v.vehicleName}</SelectItem>
+                            <SelectItem key={v.id} value={v.id.toString()}>{v.vehicle_name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -165,7 +166,7 @@ export default function FuelExpensesPage() {
                         </SelectTrigger>
                         <SelectContent>
                           {trips.map(t => (
-                            <SelectItem key={t.id} value={t.id.toString()}>{t.tripCode}</SelectItem>
+                            <SelectItem key={t.id} value={t.id.toString()}>{t.trip_code}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -215,13 +216,13 @@ export default function FuelExpensesPage() {
                 </TableHeader>
                 <TableBody>
                   {fuelLogs.map(log => {
-                    const vehicle = vehicles.find(v => v.id === log.vehicleId);
+                    const vehicle = vehicles.find(v => v.id === log.vehicle_id);
                     return (
                       <TableRow key={log.id} className="hover:bg-neutral-50/50">
-                        <TableCell className="px-4 py-3 font-medium">{vehicle?.vehicleName || 'Unknown'}</TableCell>
-                        <TableCell className="px-4 py-3">{log.fuelDate ? new Date(log.fuelDate).toLocaleDateString() : 'N/A'}</TableCell>
+                        <TableCell className="px-4 py-3 font-medium">{vehicle?.vehicle_name || 'Unknown'}</TableCell>
+                        <TableCell className="px-4 py-3">{log.fuel_date ? new Date(log.fuel_date).toLocaleDateString() : 'N/A'}</TableCell>
                         <TableCell className="px-4 py-3">{log.litres?.toFixed(1)} L</TableCell>
-                        <TableCell className="px-4 py-3">{log.totalCost?.toLocaleString()}</TableCell>
+                        <TableCell className="px-4 py-3">{log.total_cost?.toLocaleString()}</TableCell>
                       </TableRow>
                     );
                   })}
@@ -256,14 +257,14 @@ export default function FuelExpensesPage() {
                 </TableHeader>
                 <TableBody>
                   {expenses.map(exp => {
-                    const trip = trips.find(t => t.id === exp.tripId);
-                    const vehicle = trip ? vehicles.find(v => v.id === trip.vehicleId) : null;
+                    const trip = trips.find(t => t.id === exp.trip_id);
+                    const vehicle = trip ? vehicles.find(v => v.id === trip.vehicle_id) : null;
                     return (
                       <TableRow key={exp.id} className="hover:bg-neutral-50/50">
-                        <TableCell className="px-4 py-3 font-medium">{trip?.tripCode || 'N/A'}</TableCell>
-                        <TableCell className="px-4 py-3">{vehicle?.vehicleName || 'N/A'}</TableCell>
-                        <TableCell className="px-4 py-3">{exp.expenseType === 'TOLL' ? exp.amount : 0}</TableCell>
-                        <TableCell className="px-4 py-3">{exp.expenseType === 'OTHER' ? exp.amount : 0}</TableCell>
+                        <TableCell className="px-4 py-3 font-medium">{trip?.trip_code || 'N/A'}</TableCell>
+                        <TableCell className="px-4 py-3">{vehicle?.vehicle_name || 'N/A'}</TableCell>
+                        <TableCell className="px-4 py-3">{exp.expense_type === 'TOLL' ? exp.amount : 0}</TableCell>
+                        <TableCell className="px-4 py-3">{exp.expense_type === 'OTHER' ? exp.amount : 0}</TableCell>
                         <TableCell className="px-4 py-3">0</TableCell>
                         <TableCell className="px-4 py-3 font-semibold">{exp.amount.toLocaleString()}</TableCell>
                       </TableRow>

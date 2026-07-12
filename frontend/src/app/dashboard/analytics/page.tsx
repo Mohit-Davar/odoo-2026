@@ -32,8 +32,8 @@ export default function AnalyticsPage() {
   const now = new Date();
   
   trips.forEach(trip => {
-    if (trip.status === 'COMPLETED' && trip.completedAt && trip.revenue) {
-      const tripDate = new Date(trip.completedAt);
+    if (trip.status === 'COMPLETED' && trip.completed_at && trip.revenue) {
+      const tripDate = new Date(trip.completed_at);
       const monthDiff = (now.getFullYear() - tripDate.getFullYear()) * 12 + now.getMonth() - tripDate.getMonth();
       if (monthDiff >= 0 && monthDiff < 7) {
         monthlyRevenue[6 - monthDiff] += trip.revenue;
