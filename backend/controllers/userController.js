@@ -1,11 +1,12 @@
-import User from "../models/User.js"
+import { findUserById } from "../models/User.js";
 
 export const getProfile = async(req , res)=>{
     try{
-        const user = await User.findById(req.user.id).select("-password -refreshToken");
+        const user = await findUserById(req.user.id, { includePassword: false });
         if(!user)return res.status(404).json({
             msg : "User Not found"
         });
+        delete user.refreshToken;
         res.json(user);
     }catch(error){
         res.status(500).json({

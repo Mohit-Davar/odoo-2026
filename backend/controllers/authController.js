@@ -2,19 +2,19 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt"
 import { sendOtpEmail } from "../utils/mailer.js";
 import { generateOtp , canSendOtp ,saveOtpToRedis , verifyOtpFromRedis } from "../utils/otp.js";
-import User from "../models/User.js";
+import { findUserByEmail, createUser, updateUser, findUserById, findUserByRefreshToken } from "../models/User.js";
 import client from "../config/redis.js";
 
 const generateAccessToken = (user)=>{
     return jwt.sign({
-        id : user._id,
+        id : user.id,
         email : user.email
     },process.env.JWT_SECRET,{expiresIn : "15m"});
 }
 
 const generateRefreshToken = (user)=>{
     return jwt.sign({
-        id : user._id
+        id : user.id
     },process.env.REFRESH_TOKEN,{expiresIn : "7d"});
 }
 
@@ -48,20 +48,19 @@ export const resendOtp = async(req , res)=>{
 export const register = async(req, res)=>{
     try{
         const {name , email , password } = req.body;
-        const existingUser = await User.findOne({email});
+        const existingUser = await findUserByEmail(email);
         if(existingUser){
             return res.status(400).json({
                 msg : "Emails already exists"
             })
         }
         const hashed = await bcrypt.hash(password , 10);
-        const newUser = new User({
+        await createUser({
             name, 
             email, 
             password : hashed, 
             verified : false
         });
-        await newUser.save();
 
         const otp = generateOtp();
         await saveOtpToRedis(email , "register" , otp);
@@ -81,19 +80,20 @@ export const register = async(req, res)=>{
 export const verifyRegisterOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
-    const user = await User.findOne({ email });
+    const user = await findUserByEmail(email);
     if (!user) return res.status(404).json({ msg: "User not found" });
 
     const result = await verifyOtpFromRedis(email, "register", otp);
     if (!result.valid) return res.status(400).json({ msg: result.message });
 
     user.verified = true;
-    await user.save();
-
+    
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
     user.refreshToken = refreshToken;
-    await user.save();
+    
+    await updateUser(user.id, user);
+
     res.cookie("refreshToken",refreshToken,{
         httpOnly : true,
         secure : false,
@@ -109,14 +109,9 @@ export const login = async(req, res)=>{
     try{
         const {email , password} = req.body;
 
-        const user = await User.findOne({email});
+        const user = await findUserByEmail(email);
         if(!user)return res.status(404).json({
             msg : "User not found"
-        });
-
-        // Check if user is deactivated
-        if(user.isActive === false)return res.status(403).json({
-            msg : "Account has been deactivated. Please contact HR."
         });
 
         const isMatch = await bcrypt.compare(password , user.password);
@@ -142,13 +137,8 @@ export const login = async(req, res)=>{
 export const verifyLoginOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
-    const user = await User.findOne({ email });
+    const user = await findUserByEmail(email);
     if (!user) return res.status(404).json({ msg: "User not found" });
-
-    // Check if user is deactivated
-    if(user.isActive === false)return res.status(403).json({
-        msg : "Account has been deactivated. Please contact HR."
-    });
 
     const result = await verifyOtpFromRedis(email, "login", otp);
     if (!result.valid) return res.status(400).json({ msg: result.message });
@@ -157,7 +147,7 @@ export const verifyLoginOtp = async (req, res) => {
     const refreshToken = generateRefreshToken(user);
 
     user.refreshToken = refreshToken;
-    await user.save();
+    await updateUser(user.id, user);
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
@@ -179,7 +169,7 @@ export const refresh = async(req,res)=>{
 
     try{
         const decoded = jwt.verify(refreshToken , process.env.REFRESH_TOKEN);
-        const user = await User.findById(decoded.id);
+        const user = await findUserById(decoded.id);
         if(!user || user.refreshToken !== refreshToken)return res.status(403).json({
             msg : "Invalid Refresh Token"
         });
@@ -199,11 +189,11 @@ export const logout = async (req , res)=>{
     const {refreshToken} = req.cookies;
     if(!refreshToken)return res.sendStatus(204);
 
-    const user = await User.findOne({refreshToken});
+    const user = await findUserByRefreshToken(refreshToken);
     if(!user)return res.sendStatus(204);
 
     user.refreshToken = null;
-    await user.save();
+    await updateUser(user.id, user);
 
     res.clearCookie("refreshToken");
     res.json({
