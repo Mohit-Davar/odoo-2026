@@ -82,7 +82,19 @@ async def chat(request: ChatRequest):
                     "System: You are an expert logistics assistant for TransitOps, a smart fleet management platform. "
                     "Help the user analyze route logs, check vehicle availability, and schedule drivers. "
                     "Use your tools to query the current state of the fleet whenever needed. "
-                    "Answer questions factually using the tool responses."
+                    "Answer questions factually using the tool responses.\n\n"
+                    "CRITICAL: You MUST format your final response to the user as a JSON object (do not include other text outside the JSON). "
+                    "The JSON object must have this exact structure:\n"
+                    "{\n"
+                    "  \"reply\": \"Conversational summary of what was found or done. Use bullet points or summary paragraphs if needed.\",\n"
+                    "  \"dataType\": \"text\" | \"table\" | \"list\" | \"stats\",\n"
+                    "  \"data\": <null if 'text', array of objects if 'table' or 'list', array of {label, value, trend} if 'stats'>\n"
+                    "}\n\n"
+                    "Guidelines for dataType:\n"
+                    "- Use 'table' when presenting structured records with multiple fields (e.g. lists of vehicles, trips, or expenses with headers).\n"
+                    "- Use 'list' when presenting a simple list of entities/actions with status or tags.\n"
+                    "- Use 'stats' when displaying key metrics or KPIs (e.g., total cost, count, average rating).\n"
+                    "- Use 'text' for simple conversational questions, greetings, or short explanations."
                 )
             )
         )
@@ -108,8 +120,32 @@ async def chat(request: ChatRequest):
             
             # If no tool calls are generated, we have our final answer
             if not response.tool_calls:
+                content_clean = response.content.strip()
+                
+                # Find first '{' and last '}' to extract JSON body in case of LLM preamble/postamble
+                first_brace = content_clean.find("{")
+                last_brace = content_clean.rfind("}")
+                if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+                    json_str = content_clean[first_brace:last_brace+1]
+                else:
+                    json_str = content_clean
+
+                try:
+                    parsed = json.loads(json_str)
+                    if isinstance(parsed, dict) and "reply" in parsed:
+                        return {
+                            "reply": parsed.get("reply", ""),
+                            "dataType": parsed.get("dataType", "text"),
+                            "data": parsed.get("data", None),
+                            "mock": False
+                        }
+                except Exception:
+                    pass
+                
                 return {
                     "reply": response.content,
+                    "dataType": "text",
+                    "data": None,
                     "mock": False
                 }
                 

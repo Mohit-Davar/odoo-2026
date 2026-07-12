@@ -4,11 +4,14 @@ import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bot, X, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ReactMarkdown from "react-markdown";
 import axiosInstance from "../../lib/axiosInstance";
 
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  dataType?: "text" | "table" | "list" | "stats";
+  data?: any;
 }
 
 export default function ChatWidget() {
@@ -35,7 +38,15 @@ export default function ChatWidget() {
 
     try {
       const res = await axiosInstance.post("/ai/chat", { message, history });
-      setMessages((prev) => [...prev, { role: "assistant", content: res.data.reply }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: res.data.reply || "",
+          dataType: res.data.dataType || "text",
+          data: res.data.data || null,
+        },
+      ]);
     } catch {
       setError("Couldn't reach the assistant. Please try again in a moment.");
     } finally {
@@ -70,7 +81,7 @@ export default function ChatWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.97 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed bottom-24 right-6 z-50 w-[380px] max-w-[calc(100vw-3rem)] h-[540px] max-h-[calc(100vh-8rem)] bg-white rounded-2xl border border-neutral-200/50 shadow-2xl flex flex-col overflow-hidden"
+            className="fixed bottom-24 right-6 z-50 w-[420px] max-w-[calc(100vw-3rem)] h-[560px] max-h-[calc(100vh-8rem)] bg-white rounded-2xl border border-neutral-200/50 shadow-2xl flex flex-col overflow-hidden"
           >
             <div className="px-5 py-4 border-b border-neutral-100 flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-neutral-900 text-white flex items-center justify-center shrink-0">
@@ -90,18 +101,99 @@ export default function ChatWidget() {
                 </div>
               )}
 
-              {messages.map((m, i) => (
-                <div
-                  key={i}
-                  className={`max-w-[85%] px-4 py-2.5 text-sm leading-relaxed rounded-2xl ${
-                    m.role === "user"
-                      ? "ml-auto bg-neutral-900 text-white rounded-br-sm"
-                      : "bg-neutral-100 text-neutral-900 rounded-bl-sm"
-                  }`}
-                >
-                  {m.content}
-                </div>
-              ))}
+              {messages.map((m, i) => {
+                const isUser = m.role === "user";
+                const hasStructuredData = m.role === "assistant" && m.dataType && m.dataType !== "text";
+                return (
+                  <div
+                    key={i}
+                    className={`px-4 py-2.5 text-sm leading-relaxed rounded-2xl ${
+                      isUser
+                        ? "ml-auto bg-neutral-900 text-white rounded-br-sm max-w-[85%]"
+                        : hasStructuredData
+                        ? "bg-neutral-100 text-neutral-900 rounded-bl-sm w-[95%] mr-auto"
+                        : "bg-neutral-100 text-neutral-900 rounded-bl-sm max-w-[85%] mr-auto"
+                    }`}
+                  >
+                    <div className="prose prose-sm max-w-none text-neutral-800 break-words dark:prose-invert">
+                      <ReactMarkdown>{m.content}</ReactMarkdown>
+                    </div>
+
+                    {/* Render Table */}
+                    {m.role === "assistant" && m.dataType === "table" && Array.isArray(m.data) && m.data.length > 0 && (
+                      <div className="mt-3 overflow-x-auto border border-neutral-200/60 rounded-xl bg-white text-xs max-w-full shadow-sm">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="bg-neutral-50/80 border-b border-neutral-200/50">
+                              {Object.keys(m.data[0]).map((key) => (
+                                <th key={key} className="px-3 py-2.5 font-bold text-neutral-700 capitalize whitespace-nowrap">
+                                  {key.replace(/_/g, " ")}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {m.data.map((row: any, rIdx: number) => (
+                              <tr key={rIdx} className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50/30">
+                                {Object.values(row).map((val: any, cIdx: number) => (
+                                  <td key={cIdx} className="px-3 py-2 text-neutral-600 truncate max-w-[160px]" title={String(val)}>
+                                    {typeof val === "object" && val !== null ? JSON.stringify(val) : String(val)}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {/* Render List */}
+                    {m.role === "assistant" && m.dataType === "list" && Array.isArray(m.data) && (
+                      <div className="mt-3 space-y-2">
+                        {m.data.map((item: any, idx: number) => (
+                          <div key={idx} className="p-3 bg-white border border-neutral-200/60 rounded-xl flex flex-col gap-1 text-xs shadow-sm">
+                            {item.title && <div className="font-bold text-neutral-800">{item.title}</div>}
+                            {item.subtitle && <div className="text-neutral-500">{item.subtitle}</div>}
+                            {(item.status || item.badge) && (
+                              <div className="flex gap-2 items-center mt-1">
+                                {item.status && (
+                                  <span className="px-2 py-0.5 rounded-full bg-neutral-100 border border-neutral-200 font-semibold text-[10px] text-neutral-600 uppercase">
+                                    {item.status}
+                                  </span>
+                                )}
+                                {item.badge && (
+                                  <span className="px-2 py-0.5 rounded-full bg-neutral-900 font-semibold text-[10px] text-white">
+                                    {item.badge}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Render Stats */}
+                    {m.role === "assistant" && m.dataType === "stats" && Array.isArray(m.data) && (
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        {m.data.map((stat: any, idx: number) => (
+                          <div key={idx} className="p-3 bg-white border border-neutral-200/60 rounded-xl flex flex-col text-xs shadow-sm">
+                            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">{stat.label}</span>
+                            <span className="text-base font-extrabold text-neutral-900 mt-1">{stat.value}</span>
+                            {stat.trend && (
+                              <span className={`text-[10px] mt-1 font-semibold flex items-center gap-0.5 ${
+                                stat.trend === "up" ? "text-emerald-600" : stat.trend === "down" ? "text-rose-600" : "text-neutral-500"
+                              }`}>
+                                {stat.trend === "up" ? "▲" : stat.trend === "down" ? "▼" : "•"} {stat.change || ""}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
 
               {sending && (
                 <div className="bg-neutral-100 text-neutral-500 rounded-2xl rounded-bl-sm px-4 py-2.5 w-fit flex items-center gap-1">
