@@ -1,7 +1,9 @@
 "use client";
-
 import { useAppStore } from "@/store/useAppStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import axiosInstance from "../../../../lib/axiosInstance";
 
 export default function AnalyticsPage() {
   const { analyticsStats, trips } = useAppStore();
@@ -42,6 +44,25 @@ export default function AnalyticsPage() {
   });
   const maxMonthRev = Math.max(...monthlyRevenue, 1);
 
+  const downloadReport = async (reportName: string, format: "csv" | "pdf") => {
+    try {
+      const response = await axiosInstance.get(`/analytics/${reportName}`, {
+        params: { format },
+        responseType: 'blob'
+      });
+      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${reportName}.${format}`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+    } catch (error) {
+      console.error(`Failed to download ${reportName} report in ${format} format`, error);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-8">
@@ -50,12 +71,24 @@ export default function AnalyticsPage() {
             Reports & Analytics
           </h1>
         </div>
+        <div className="flex gap-2">
+          <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => downloadReport('vehicle-roi', 'csv')}>
+            Export ROI (CSV)
+          </Button>
+          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700" onClick={() => downloadReport('vehicle-roi', 'pdf')}>
+            Export ROI (PDF)
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="border-t-4 border-t-blue-500">
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-xs text-neutral-500 uppercase tracking-wider">Avg Fuel Efficiency</CardTitle>
+            <div className="flex gap-1">
+              <button onClick={() => downloadReport('fuel-efficiency', 'csv')} className="text-[10px] text-blue-500 underline">CSV</button>
+              <button onClick={() => downloadReport('fuel-efficiency', 'pdf')} className="text-[10px] text-blue-500 underline">PDF</button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{avgEfficiency} km/l</div>
@@ -63,8 +96,12 @@ export default function AnalyticsPage() {
         </Card>
         
         <Card className="border-t-4 border-t-green-500">
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-xs text-neutral-500 uppercase tracking-wider">Fleet Utilization</CardTitle>
+            <div className="flex gap-1">
+              <button onClick={() => downloadReport('fleet-utilization', 'csv')} className="text-[10px] text-blue-500 underline">CSV</button>
+              <button onClick={() => downloadReport('fleet-utilization', 'pdf')} className="text-[10px] text-blue-500 underline">PDF</button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{utilization}%</div>
@@ -72,8 +109,12 @@ export default function AnalyticsPage() {
         </Card>
         
         <Card className="border-t-4 border-t-amber-500">
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-xs text-neutral-500 uppercase tracking-wider">Operational Cost</CardTitle>
+            <div className="flex gap-1">
+              <button onClick={() => downloadReport('operational-cost', 'csv')} className="text-[10px] text-blue-500 underline">CSV</button>
+              <button onClick={() => downloadReport('operational-cost', 'pdf')} className="text-[10px] text-blue-500 underline">PDF</button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">₹{operationalCost.toLocaleString()}</div>
@@ -81,8 +122,12 @@ export default function AnalyticsPage() {
         </Card>
 
         <Card className="border-t-4 border-t-green-600">
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-xs text-neutral-500 uppercase tracking-wider">Vehicle ROI</CardTitle>
+            <div className="flex gap-1">
+              <button onClick={() => downloadReport('vehicle-roi', 'csv')} className="text-[10px] text-blue-500 underline">CSV</button>
+              <button onClick={() => downloadReport('vehicle-roi', 'pdf')} className="text-[10px] text-blue-500 underline">PDF</button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{avgRoi}%</div>
@@ -137,6 +182,49 @@ export default function AnalyticsPage() {
             )}
           </div>
         </div>
+      </div>
+
+      <div className="mt-8 space-y-4">
+        <h4 className="text-xs uppercase tracking-wider text-neutral-500 font-semibold">Vehicle ROI Details</h4>
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="uppercase text-xs tracking-wider font-semibold px-4 py-3">Vehicle</TableHead>
+                  <TableHead className="uppercase text-xs tracking-wider font-semibold px-4 py-3">Acquisition Cost</TableHead>
+                  <TableHead className="uppercase text-xs tracking-wider font-semibold px-4 py-3">Fuel Cost</TableHead>
+                  <TableHead className="uppercase text-xs tracking-wider font-semibold px-4 py-3">Maintenance Cost</TableHead>
+                  <TableHead className="uppercase text-xs tracking-wider font-semibold px-4 py-3">Total Cost</TableHead>
+                  <TableHead className="uppercase text-xs tracking-wider font-semibold px-4 py-3">Revenue</TableHead>
+                  <TableHead className="uppercase text-xs tracking-wider font-semibold px-4 py-3 text-right">ROI</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {vehicleROIList.map((vehicle: any) => (
+                  <TableRow key={vehicle.vehicleId} className="hover:bg-neutral-50/50">
+                    <TableCell className="px-4 py-3 font-semibold uppercase">{vehicle.vehicleName}</TableCell>
+                    <TableCell className="px-4 py-3">₹{vehicle.acquisitionCost?.toLocaleString()}</TableCell>
+                    <TableCell className="px-4 py-3">₹{vehicle.totalFuelCost?.toLocaleString()}</TableCell>
+                    <TableCell className="px-4 py-3">₹{vehicle.totalMaintenanceCost?.toLocaleString()}</TableCell>
+                    <TableCell className="px-4 py-3">₹{vehicle.totalCost?.toLocaleString()}</TableCell>
+                    <TableCell className="px-4 py-3">₹{vehicle.revenue?.toLocaleString()}</TableCell>
+                    <TableCell className="px-4 py-3 text-right font-medium text-green-600">
+                      {vehicle.roi}%
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {vehicleROIList.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-neutral-500">
+                      No vehicle ROI details found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

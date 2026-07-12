@@ -189,6 +189,17 @@ export const deleteVehicleRecord = async (req, res) => {
     const { id } = validation.data;
 
     try {
+        const vehicle = await findVehicleById(id);
+        if (!vehicle) {
+            return res.status(404).json({
+                msg: "Vehicle not found."
+            });
+        }
+        if (vehicle.status === 'ON_TRIP') {
+            return res.status(400).json({
+                msg: "Cannot delete a vehicle that is currently on a trip."
+            });
+        }
         const deleted = await deleteVehicle(id);
         if (!deleted) {
             return res.status(404).json({

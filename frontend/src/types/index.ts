@@ -17,11 +17,11 @@ export interface Vehicle {
 
 export interface Driver {
   id: number;
-  full_name: string;
-  license_number: string;
-  license_category: string;
-  license_expiry_date: string;
-  contact_number: string;
+  fullName: string;
+  licenseNumber: string;
+  licenseCategory: string;
+  licenseExpiryDate: string;
+  contactNumber: string;
   rating: number; // Safety Score (0-100)
   status: DriverStatus;
   tripCompletedCount?: number; // Add computed property for UI

@@ -9,24 +9,22 @@ export async function getDashboardKPIs() {
     const sql = `
         SELECT
             -- Vehicle KPIs
-            COUNT(v.id)                                                              AS total_vehicles,
-            COUNT(v.id) FILTER (WHERE v.status = 'AVAILABLE')                       AS available_vehicles,
-            COUNT(v.id) FILTER (WHERE v.status = 'ON_TRIP')                         AS active_vehicles,
-            COUNT(v.id) FILTER (WHERE v.status = 'IN_SHOP')                         AS vehicles_in_maintenance,
-            COUNT(v.id) FILTER (WHERE v.status = 'RETIRED')                         AS retired_vehicles,
+            (SELECT COUNT(*)                                        FROM vehicles)                            AS total_vehicles,
+            (SELECT COUNT(*) FILTER (WHERE status = 'AVAILABLE')   FROM vehicles)                            AS available_vehicles,
+            (SELECT COUNT(*) FILTER (WHERE status = 'ON_TRIP')     FROM vehicles)                            AS active_vehicles,
+            (SELECT COUNT(*) FILTER (WHERE status = 'IN_SHOP')     FROM vehicles)                            AS vehicles_in_maintenance,
+            (SELECT COUNT(*) FILTER (WHERE status = 'RETIRED')     FROM vehicles)                            AS retired_vehicles,
 
             -- Driver KPIs
-            COUNT(d.id)                                                              AS total_drivers,
-            COUNT(d.id) FILTER (WHERE d.status = 'ON_TRIP')                         AS drivers_on_duty,
-            COUNT(d.id) FILTER (WHERE d.status = 'AVAILABLE')                       AS available_drivers,
-            COUNT(d.id) FILTER (WHERE d.status = 'SUSPENDED')                       AS suspended_drivers,
+            (SELECT COUNT(*)                                        FROM drivers)                             AS total_drivers,
+            (SELECT COUNT(*) FILTER (WHERE status = 'ON_TRIP')     FROM drivers)                             AS drivers_on_duty,
+            (SELECT COUNT(*) FILTER (WHERE status = 'AVAILABLE')   FROM drivers)                             AS available_drivers,
+            (SELECT COUNT(*) FILTER (WHERE status = 'SUSPENDED')   FROM drivers)                             AS suspended_drivers,
 
             -- Trip KPIs
             (SELECT COUNT(*) FROM trips WHERE status = 'DISPATCHED')                AS active_trips,
             (SELECT COUNT(*) FROM trips WHERE status = 'DRAFT')                     AS pending_trips,
-            (SELECT COUNT(*) FROM trips WHERE status = 'COMPLETED')                 AS completed_trips
-
-        FROM vehicles v, drivers d;
+            (SELECT COUNT(*) FROM trips WHERE status = 'COMPLETED')                 AS completed_trips;
     `;
     const { rows } = await pool.query(sql);
     const r = rows[0];

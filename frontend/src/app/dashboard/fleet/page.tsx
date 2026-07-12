@@ -14,7 +14,7 @@ import { VehicleStatus } from "@/types";
 import { toast } from "sonner";
 
 export default function FleetPage() {
-  const { vehicles, addVehicle } = useAppStore();
+  const { vehicles, addVehicle, retireVehicle, deleteVehicle } = useAppStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -40,6 +40,26 @@ export default function FleetPage() {
         return <Badge className="bg-red-500">Retired</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  const handleRetire = async (id: number) => {
+    if (!confirm("Are you sure you want to retire this vehicle? This action cannot be undone.")) return;
+    const res = await retireVehicle(id);
+    if (res.ok) {
+      toast.success(res.message);
+    } else {
+      toast.error(res.message);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this vehicle record?")) return;
+    const res = await deleteVehicle(id);
+    if (res.ok) {
+      toast.success(res.message);
+    } else {
+      toast.error(res.message);
     }
   };
 
@@ -195,6 +215,7 @@ export default function FleetPage() {
                 <TableHead className="uppercase text-xs tracking-wider font-semibold px-4 py-3">ODOMETER</TableHead>
                 <TableHead className="uppercase text-xs tracking-wider font-semibold px-4 py-3">ACQ. COST</TableHead>
                 <TableHead className="uppercase text-xs tracking-wider font-semibold px-4 py-3">STATUS</TableHead>
+                <TableHead className="uppercase text-xs tracking-wider font-semibold px-4 py-3">ACTIONS</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -207,11 +228,23 @@ export default function FleetPage() {
                   <TableCell className="px-4 py-3">{vehicle.odometer_km?.toLocaleString()} km</TableCell>
                   <TableCell className="px-4 py-3">₹{vehicle.acquisition_cost?.toLocaleString()}</TableCell>
                   <TableCell className="px-4 py-3">{getStatusBadge(vehicle.status)}</TableCell>
+                  <TableCell className="px-4 py-3 space-x-2">
+                    {vehicle.status !== 'RETIRED' && (
+                      <Button size="sm" variant="outline" className="text-xs h-7 border-red-500 text-red-600 hover:bg-red-50" onClick={() => handleRetire(vehicle.id)}>
+                        Retire
+                      </Button>
+                    )}
+                    {vehicle.status === 'RETIRED' && (
+                      <Button size="sm" variant="destructive" className="text-xs h-7" onClick={() => handleDelete(vehicle.id)}>
+                        Delete
+                      </Button>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
               {filteredVehicles.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-neutral-500">
+                  <TableCell colSpan={8} className="text-center py-8 text-neutral-500">
                     No vehicles found matching criteria.
                   </TableCell>
                 </TableRow>

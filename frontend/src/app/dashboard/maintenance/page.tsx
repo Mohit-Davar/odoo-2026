@@ -14,8 +14,13 @@ import { MaintenanceLog } from "@/types";
 import { toast } from "sonner";
 
 export default function MaintenancePage() {
-  const { vehicles, maintenanceLogs, addMaintenanceLog } = useAppStore();
-  
+  const { vehicles, maintenanceLogs, addMaintenanceLog, updateMaintenanceLog } = useAppStore();
+
+  // Only show vehicles that can have maintenance logged:
+  // AVAILABLE (to put IN_SHOP) or already IN_SHOP (to log additional work).
+  // ON_TRIP and RETIRED vehicles are excluded — backend blocks them too.
+  const eligibleVehicles = vehicles.filter(v => v.status === 'AVAILABLE' || v.status === 'IN_SHOP');
+
   const [vehicleId, setVehicleId] = useState<string>("");
   const [serviceType, setServiceType] = useState("");
   const [cost, setCost] = useState("");
@@ -35,7 +40,7 @@ export default function MaintenancePage() {
       description: serviceType,
       cost: Number(cost),
       maintenanceDate: date,
-      status: status === "Active" ? "IN_PROGRESS" : "COMPLETED",
+      status: status === "Active" ? "ACTIVE" : "COMPLETED",
     };
 
     const res = await addMaintenanceLog(newLog as any);
@@ -53,6 +58,22 @@ export default function MaintenancePage() {
     }
     
     setIsSubmitting(false);
+  };
+
+  const handleCompleteMaintenance = async (id: number, vehicleId: number, description: string, cost: number, maintenanceDate: string) => {
+    if (!confirm("Are you sure you want to mark this maintenance as Completed?")) return;
+    const res = await updateMaintenanceLog(id, {
+      vehicleId,
+      description,
+      cost,
+      maintenanceDate,
+      status: "COMPLETED"
+    });
+    if (res.ok) {
+      toast.success("Maintenance log completed, vehicle is available.");
+    } else {
+      toast.error(res.message);
+    }
   };
 
   return (
@@ -80,9 +101,15 @@ export default function MaintenancePage() {
                     <SelectValue placeholder="Select vehicle" />
                   </SelectTrigger>
                   <SelectContent>
-                    {vehicles.map(v => (
-                      <SelectItem key={v.id} value={v.id.toString()}>{v.vehicleName}</SelectItem>
+                    {eligibleVehicles.map(v => (
+                      <SelectItem key={v.id} value={v.id.toString()}>
+                        {v.vehicleName}
+                        <span className="ml-2 text-xs text-neutral-400">({v.status === 'IN_SHOP' ? 'In Shop' : 'Available'})</span>
+                      </SelectItem>
                     ))}
+                    {eligibleVehicles.length === 0 && (
+                      <SelectItem value="none" disabled>No eligible vehicles (all on trip or retired)</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -147,24 +174,39 @@ export default function MaintenancePage() {
                     <TableHead className="uppercase text-xs tracking-wider font-semibold px-4 py-3">Vehicle</TableHead>
                     <TableHead className="uppercase text-xs tracking-wider font-semibold px-4 py-3">Service</TableHead>
                     <TableHead className="uppercase text-xs tracking-wider font-semibold px-4 py-3">Cost</TableHead>
+                    <TableHead className="uppercase text-xs tracking-wider font-semibold px-4 py-3">Date</TableHead>
                     <TableHead className="uppercase text-xs tracking-wider font-semibold px-4 py-3">Status</TableHead>
+                    <TableHead className="uppercase text-xs tracking-wider font-semibold px-4 py-3">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {maintenanceLogs.map(log => {
-                    const vehicle = vehicles.find(v => v.id === log.vehicle_id);
-                    // Infer status from vehicle status if we don't have a status on log
-                    const isCompleted = vehicle?.status !== 'IN_SHOP';
+                    const vehicle = vehicles.find(v => v.id === log.vehicleId);
+                    const isCompleted = log.status === 'COMPLETED';
+                    const displayDate = log.maintenanceDate ? new Date(log.maintenanceDate).toLocaleDateString() : '-';
                     return (
                       <TableRow key={log.id} className="hover:bg-neutral-50/50">
                         <TableCell className="px-4 py-3 font-medium">{vehicle?.vehicleName || 'Unknown'}</TableCell>
                         <TableCell className="px-4 py-3">{log.description}</TableCell>
-                        <TableCell className="px-4 py-3">{log.cost.toLocaleString()}</TableCell>
+                        <TableCell className="px-4 py-3">₹{log.cost.toLocaleString()}</TableCell>
+                        <TableCell className="px-4 py-3">{displayDate}</TableCell>
                         <TableCell className="px-4 py-3">
                           {isCompleted ? (
                             <Badge className="bg-green-500">Completed</Badge>
                           ) : (
-                            <Badge className="bg-amber-500 text-white hover:bg-amber-600">In Shop</Badge>
+                            <Badge className="bg-amber-500 text-white">Active (In Shop)</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="px-4 py-3">
+                          {!isCompleted && (
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs h-7 border-green-500 text-green-600 hover:bg-green-50"
+                              onClick={() => handleCompleteMaintenance(log.id, log.vehicleId, log.description, log.cost, log.maintenanceDate)}
+                            >
+                              Complete
+                            </Button>
                           )}
                         </TableCell>
                       </TableRow>
@@ -172,7 +214,7 @@ export default function MaintenancePage() {
                   })}
                   {maintenanceLogs.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8 text-neutral-500">
+                      <TableCell colSpan={6} className="text-center py-8 text-neutral-500">
                         No service records found.
                       </TableCell>
                     </TableRow>

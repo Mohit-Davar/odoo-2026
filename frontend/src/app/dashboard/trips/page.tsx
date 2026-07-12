@@ -12,7 +12,7 @@ import { TripStatus } from "@/types";
 import { toast } from "sonner";
 
 export default function TripsPage() {
-  const { vehicles, drivers, trips, addTrip, dispatchTrip, updateVehicle, updateDriver, completeTrip } = useAppStore();
+  const { vehicles, drivers, trips, addTrip, dispatchTrip, completeTrip, cancelTrip } = useAppStore();
   
   const [source, setSource] = useState("");
   const [destination, setDestination] = useState("");
@@ -68,6 +68,17 @@ export default function TripsPage() {
     setIsSubmitting(false);
   };
 
+  const handleDispatchDraft = async (tripId: number) => {
+    setIsSubmitting(true);
+    const res = await dispatchTrip(tripId);
+    if (res.ok) {
+      toast.success("Trip successfully dispatched!");
+    } else {
+      toast.error(res.message || "Failed to dispatch trip");
+    }
+    setIsSubmitting(false);
+  };
+
   const handleComplete = async (tripId: number) => {
     const revenueStr = window.prompt("Enter total trip revenue (₹):");
     if (revenueStr === null) return; // user cancelled
@@ -81,6 +92,16 @@ export default function TripsPage() {
     const res = await completeTrip(tripId, data);
     if (res.ok) {
       toast.success("Trip completed successfully!");
+    } else {
+      toast.error(res.message);
+    }
+  };
+
+  const handleCancelTrip = async (tripId: number) => {
+    if (!confirm("Are you sure you want to cancel this trip?")) return;
+    const res = await cancelTrip(tripId);
+    if (res.ok) {
+      toast.success("Trip cancelled successfully!");
     } else {
       toast.error(res.message);
     }
@@ -237,9 +258,19 @@ export default function TripsPage() {
                     <div className="flex justify-between items-end mt-4">
                       {getStatusBadge(trip.status)}
                       <div className="flex items-center gap-3">
+                        {trip.status === 'DRAFT' && (
+                          <Button size="sm" variant="outline" className="text-xs h-7 px-2 border-blue-500 text-blue-600 hover:bg-blue-50" onClick={() => handleDispatchDraft(trip.id)} disabled={isSubmitting}>
+                            Start Trip
+                          </Button>
+                        )}
                         {trip.status === 'DISPATCHED' && (
                           <Button size="sm" variant="outline" className="text-xs h-7 px-2 border-green-500 text-green-600 hover:bg-green-50" onClick={() => handleComplete(trip.id)}>
                             Complete Trip
+                          </Button>
+                        )}
+                        {(trip.status === 'DRAFT' || trip.status === 'DISPATCHED') && (
+                          <Button size="sm" variant="outline" className="text-xs h-7 px-2 border-red-500 text-red-600 hover:bg-red-50" onClick={() => handleCancelTrip(trip.id)}>
+                            Cancel
                           </Button>
                         )}
                         <div className="text-xs text-neutral-400">

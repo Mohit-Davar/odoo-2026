@@ -5,5 +5,5 @@ import { z } from 'zod';
  * Validates an optional 'format' query parameter.
  */
 export const reportFormatSchema = z.object({
-  format: z.enum(['csv']).optional(),
+  format: z.enum(['csv', 'pdf']).optional(),
 });

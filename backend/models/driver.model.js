@@ -72,12 +72,12 @@ export async function getAllDrivers(filters = {}) {
 
     if (search) {
         values.push(`%${search}%`);
-        whereClauses.push(`(full_name ILIKE ${values.length} OR license_number ILIKE ${values.length})`);
+        whereClauses.push(`(full_name ILIKE $${values.length} OR license_number ILIKE $${values.length})`);
     }
 
     if (status) {
         values.push(status);
-        whereClauses.push(`status = ${values.length}`);
+        whereClauses.push(`status = $${values.length}`);
     }
 
     if (whereClauses.length > 0) {

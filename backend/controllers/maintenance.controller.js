@@ -36,6 +36,9 @@ export const registerMaintenance = async (req, res) => {
         if (vehicle.status === 'RETIRED') {
             return res.status(400).json({ msg: "Cannot create maintenance log for a retired vehicle." });
         }
+        if (vehicle.status === 'ON_TRIP') {
+            return res.status(400).json({ msg: "Cannot create maintenance log for a vehicle that is currently on an active trip." });
+        }
         
         const newLog = await createMaintenanceLog(data);
 
@@ -143,6 +146,12 @@ export const updateMaintenanceDetails = async (req, res) => {
             const vehicle = await findVehicleById(updateData.vehicleId);
             if (!vehicle) {
                 return res.status(404).json({ msg: "Vehicle not found." });
+            }
+            if (vehicle.status === 'RETIRED') {
+                return res.status(400).json({ msg: "Cannot reassign maintenance log to a retired vehicle." });
+            }
+            if (vehicle.status === 'ON_TRIP') {
+                return res.status(400).json({ msg: "Cannot reassign maintenance log to a vehicle currently on an active trip." });
             }
         }
 

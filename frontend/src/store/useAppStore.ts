@@ -27,6 +27,7 @@ interface AppState {
   
   addDriver: (driver: Omit<Driver, 'id'>) => Promise<{ ok: boolean; message: string }>;
   updateDriver: (id: number, data: Partial<Driver>) => Promise<{ ok: boolean; message: string }>;
+  deleteDriver: (id: number) => Promise<{ ok: boolean; message: string }>;
   
   addTrip: (trip: any) => Promise<{ ok: boolean; message: string; data?: any }>;
   updateTrip: (id: number, data: Partial<Trip>) => Promise<{ ok: boolean; message: string }>;
@@ -101,7 +102,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       set((state) => ({ vehicles: [...state.vehicles, res.data.vehicle || res.data] }));
       return { ok: true, message: "Vehicle added" };
     } catch (err: any) {
-      return { ok: false, message: err.response?.data?.error || "Failed to add vehicle" };
+      return { ok: false, message: err.response?.data?.msg || err.response?.data?.error || "Failed to add vehicle" };
     }
   },
   
@@ -113,7 +114,33 @@ export const useAppStore = create<AppState>((set, get) => ({
       }));
       return { ok: true, message: "Vehicle updated" };
     } catch (err: any) {
-      return { ok: false, message: err.response?.data?.error || "Failed to update vehicle" };
+      return { ok: false, message: err.response?.data?.msg || err.response?.data?.error || "Failed to update vehicle" };
+    }
+  },
+
+  retireVehicle: async (id) => {
+    try {
+      const res = await axiosInstance.put(`/vehicles/${id}`, { status: 'RETIRED' });
+      set((state) => ({
+        vehicles: state.vehicles.map(v => v.id === id ? { ...v, status: 'RETIRED', ...(res.data.vehicle || res.data) } : v)
+      }));
+      await get().fetchDashboardData();
+      return { ok: true, message: "Vehicle retired successfully" };
+    } catch (err: any) {
+      return { ok: false, message: err.response?.data?.msg || err.response?.data?.error || "Failed to retire vehicle" };
+    }
+  },
+
+  deleteVehicle: async (id) => {
+    try {
+      await axiosInstance.delete(`/vehicles/${id}`);
+      set((state) => ({
+        vehicles: state.vehicles.filter(v => v.id !== id)
+      }));
+      await get().fetchDashboardData();
+      return { ok: true, message: "Vehicle deleted successfully" };
+    } catch (err: any) {
+      return { ok: false, message: err.response?.data?.msg || err.response?.data?.error || "Failed to delete vehicle" };
     }
   },
 
@@ -135,7 +162,17 @@ export const useAppStore = create<AppState>((set, get) => ({
       }));
       return { ok: true, message: "Driver updated" };
     } catch (err: any) {
-      return { ok: false, message: err.response?.data?.error || "Failed to update driver" };
+      return { ok: false, message: err.response?.data?.msg || "Failed to update driver" };
+    }
+  },
+
+  deleteDriver: async (id) => {
+    try {
+      await axiosInstance.delete(`/drivers/${id}`);
+      set((state) => ({ drivers: state.drivers.filter(d => d.id !== id) }));
+      return { ok: true, message: "Driver deleted" };
+    } catch (err: any) {
+      return { ok: false, message: err.response?.data?.msg || "Failed to delete driver" };
     }
   },
 
@@ -199,7 +236,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       await get().fetchDashboardData();
       return { ok: true, message: "Maintenance log added" };
     } catch (err: any) {
-      return { ok: false, message: err.response?.data?.error || "Failed to add maintenance log" };
+      return { ok: false, message: err.response?.data?.msg || err.response?.data?.error || "Failed to add maintenance log" };
     }
   },
 
