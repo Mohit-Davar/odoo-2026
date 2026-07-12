@@ -12,6 +12,9 @@ interface AppState {
   
   dashboardStats: any;
   analyticsStats: any;
+
+  users: any[];
+  roles: any[];
   
   isLoading: boolean;
   error: string | null;
@@ -37,6 +40,11 @@ interface AppState {
   
   addFuelLog: (log: Omit<FuelLog, 'id'>) => Promise<{ ok: boolean; message: string }>;
   addExpense: (expense: Omit<Expense, 'id'>) => Promise<{ ok: boolean; message: string }>;
+
+  fetchRoles: () => Promise<void>;
+  fetchUsers: () => Promise<void>;
+  addPerson: (data: any) => Promise<{ ok: boolean; message: string }>;
+  assignRole: (userId: number, roleId: number) => Promise<{ ok: boolean; message: string }>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -49,6 +57,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   
   dashboardStats: null,
   analyticsStats: null,
+
+  users: [],
+  roles: [],
   
   isLoading: false,
   error: null,
@@ -219,6 +230,44 @@ export const useAppStore = create<AppState>((set, get) => ({
       return { ok: true, message: "Expense added" };
     } catch (err: any) {
       return { ok: false, message: err.response?.data?.error || "Failed to add expense" };
+    }
+  },
+
+  fetchRoles: async () => {
+    try {
+      const res = await axiosInstance.get('/admin/roles');
+      set({ roles: res.data });
+    } catch (error) {
+      console.error("Failed to fetch roles:", error);
+    }
+  },
+
+  fetchUsers: async () => {
+    try {
+      const res = await axiosInstance.get('/admin/users');
+      set({ users: res.data });
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+    }
+  },
+
+  addPerson: async (data) => {
+    try {
+      await axiosInstance.post('/admin/users', data);
+      await get().fetchUsers();
+      return { ok: true, message: "User added successfully" };
+    } catch (err: any) {
+      return { ok: false, message: err.response?.data?.msg || err.response?.data?.errors || "Failed to add user" };
+    }
+  },
+
+  assignRole: async (userId, roleId) => {
+    try {
+      await axiosInstance.patch(`/admin/users/${userId}/role`, { roleId });
+      await get().fetchUsers();
+      return { ok: true, message: "Role assigned successfully" };
+    } catch (err: any) {
+      return { ok: false, message: err.response?.data?.msg || "Failed to assign role" };
     }
   },
 }));
