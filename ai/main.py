@@ -19,7 +19,7 @@ load_dotenv()
 
 # Configure OpenAI client via LangChain
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5-nano")
 
 if OPENAI_API_KEY:
     # Initialize the LangChain ChatOpenAI LLM
