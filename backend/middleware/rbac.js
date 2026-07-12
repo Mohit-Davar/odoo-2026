@@ -10,7 +10,14 @@ import { findUserById } from "../models/user.model.js";
 export const requireRoles = (allowedRoles) => {
     return async (req, res, next) => {
         try {
-            if (!req.user || !req.user.id) {
+            if (!req.user) {
+                return res.status(401).json({ msg: "Not authenticated" });
+            }
+            if (req.user.isInternal) {
+                return next();
+            }
+
+            if (!req.user.id) {
                 return res.status(401).json({ msg: "Not authenticated" });
             }
 
@@ -20,7 +27,10 @@ export const requireRoles = (allowedRoles) => {
                 return res.status(404).json({ msg: "User not found" });
             }
             // Fetch the role name from the database
-            const { rows } = await pool.query("SELECT name FROM roles WHERE id = $1", [user.roleId]);
+            const { rows } = await pool.query(
+                "SELECT UPPER(REPLACE(name, ' ', '_')) AS name FROM roles WHERE id = $1",
+                [user.roleId]
+            );
             if (rows.length === 0) {
                 return res.status(403).json({ msg: "Role not found" });
             }

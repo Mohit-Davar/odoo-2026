@@ -1,11 +1,9 @@
 import cloudinary from 'cloudinary';
 import { addDocument, deleteDocumentById, getDocumentById } from '../models/document.model.js';
 
-// Configure Cloudinary
+// Cloudinary SDK automatically uses the CLOUDINARY_URL environment variable.
+// We only need to force secure URLs.
 cloudinary.v2.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
   secure: true,
 });
 
@@ -16,7 +14,7 @@ export const getCloudinarySignature = async (req, res) => {
             {
                 timestamp: timestamp,
             },
-            process.env.CLOUDINARY_API_SECRET
+            cloudinary.v2.config().api_secret
         );
         res.json({ timestamp, signature });
     } catch (error) {

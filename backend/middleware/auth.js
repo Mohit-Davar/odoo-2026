@@ -7,7 +7,7 @@ export const verifyAccessToken = (req, res, next) => {
         const internalSecret = req.headers['x-internal-secret'];
         const expectedSecret = process.env.INTERNAL_API_SECRET || "transitops-internal";
         if (internalSecret && internalSecret === expectedSecret) {
-            req.user = { id: 1, email: "internal-ai-service@transitops.local", roleId: 1 }; // Admin-level internal user
+            req.user = { isInternal: true, email: "internal-ai-service@transitops.local", roleId: 1 }; // Admin-level internal user
             return next();
         }
 
@@ -35,7 +35,13 @@ export const verifyAccessToken = (req, res, next) => {
 
 export const isAdmin = async (req, res, next) => {
     try {
-        if (!req.user || !req.user.id) {
+        if (!req.user) {
+            return res.status(401).json({ msg: "Not authenticated" });
+        }
+        if (req.user.isInternal) {
+            return next();
+        }
+        if (!req.user.id) {
             return res.status(401).json({ msg: "Not authenticated" });
         }
         const user = await findUserById(req.user.id);
