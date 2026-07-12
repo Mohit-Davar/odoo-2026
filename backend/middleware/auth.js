@@ -32,7 +32,7 @@ export const isAdmin = async (req, res, next) => {
         }
         const user = await findUserById(req.user.id);
 
-        if (user && user.roleId === 1) { // Assuming role_id 1 is Admin
+        if (user && user.roleId === 1) {
             next();
         } else {
             return res.status(403).json({ msg: "Access Denied: Admin only" });
