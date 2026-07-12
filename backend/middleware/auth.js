@@ -3,6 +3,14 @@ import { findUserById } from "../models/user.model.js";
 
 export const verifyAccessToken = (req, res, next) => {
     try {
+        // Allow internal backend-to-backend requests to bypass JWT check using a secret header
+        const internalSecret = req.headers['x-internal-secret'];
+        const expectedSecret = process.env.INTERNAL_API_SECRET || "transitops-internal";
+        if (internalSecret && internalSecret === expectedSecret) {
+            req.user = { id: 1, email: "internal-ai-service@transitops.local", roleId: 1 }; // Admin-level internal user
+            return next();
+        }
+
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith("Bearer ")) {
             return res.status(401).json({
