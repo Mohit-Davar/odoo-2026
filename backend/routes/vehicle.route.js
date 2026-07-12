@@ -7,14 +7,22 @@ import {
     deleteVehicleRecord
 } from "../controllers/vehicle.controller.js";
 import { verifyAccessToken } from "../middleware/auth.js";
+import { requireRoles } from "../middleware/rbac.js";
 
 const router = express.Router();
 
-// Apply auth middleware to protect vehicle administration endpoints
-router.post("/", verifyAccessToken, registerVehicle);
-router.get("/", verifyAccessToken, getVehicles);
-router.get("/:id", verifyAccessToken, getVehicleDetail);
-router.put("/:id", verifyAccessToken, updateVehicleDetails);
-router.delete("/:id", verifyAccessToken, deleteVehicleRecord);
+// Define allowed roles based on description.md matrix
+const viewRoles = ["Fleet Manager", "Dispatcher", "Safety Officer", "Financial Analyst"];
+const crudRoles = ["Fleet Manager"];
+
+// All endpoints require authentication
+router.use(verifyAccessToken);
+// View Vehicles
+router.get("/", requireRoles(viewRoles), getVehicles);
+router.get("/:id", requireRoles(viewRoles), getVehicleDetail);
+// Manage Vehicles
+router.post("/", requireRoles(crudRoles), registerVehicle);
+router.put("/:id", requireRoles(crudRoles), updateVehicleDetails);
+router.delete("/:id", requireRoles(crudRoles), deleteVehicleRecord);
 
 export default router;
