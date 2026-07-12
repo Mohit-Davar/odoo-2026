@@ -56,14 +56,18 @@ export const registerVehicle = async (req, res) => {
  */
 
 /**
- * Retrieves all registered vehicles.
+ * Retrieves all registered vehicles, with optional filtering, searching, and sorting.
  * @param {GetVehiclesRequest} req The Express request object.
  * @param {GetVehiclesResponse} res The Express response object.
  * @returns {Promise<GetVehiclesResponse>}
  */
 export const getVehicles = async (req, res) => {
     try {
-        const vehicles = await getAllVehicles();
+        // Extract query parameters
+        const { search, status, sortBy, order } = req.query;
+        const filters = { search, status, sortBy, order };
+
+        const vehicles = await getAllVehicles(filters);
         return res.status(200).json(vehicles);
     } catch (error) {
         return res.status(500).json({

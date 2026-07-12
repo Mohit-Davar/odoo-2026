@@ -52,16 +52,45 @@ export async function findDriverById(id) {
 }
 
 /**
- * Retrieves all drivers in the database
+ * Retrieves all drivers in the database with optional filtering, searching, and sorting
+ * @param {object} filters - Optional filters for the query
+ * @param {string} filters.search - A search term to match against name or license number
+ * @param {string} filters.status - A specific driver status to filter by
+ * @param {string} filters.sortBy - The column to sort by (default: 'created_at')
+ * @param {string} filters.order - The sort order ('ASC' or 'DESC', default: 'DESC')
  * @returns {Promise<Array>} List of drivers
  */
-export async function getAllDrivers() {
-    const sql = `
+export async function getAllDrivers(filters = {}) {
+    const { search, status, sortBy = 'created_at', order = 'DESC' } = filters;
+    let sql = `
         SELECT id, full_name, license_number, license_category, license_expiry_date, contact_number, rating, status, created_at, updated_at
         FROM drivers
-        ORDER BY created_at DESC;
     `;
-    const { rows } = await pool.query(sql);
+    
+    const values = [];
+    const whereClauses = [];
+
+    if (search) {
+        values.push(`%${search}%`);
+        whereClauses.push(`(full_name ILIKE ${values.length} OR license_number ILIKE ${values.length})`);
+    }
+
+    if (status) {
+        values.push(status);
+        whereClauses.push(`status = ${values.length}`);
+    }
+
+    if (whereClauses.length > 0) {
+        sql += ` WHERE ${whereClauses.join(' AND ')}`;
+    }
+
+    const allowedSortBy = ['full_name', 'license_number', 'license_category', 'license_expiry_date', 'rating', 'status', 'created_at'];
+    const safeSortBy = allowedSortBy.includes(sortBy) ? sortBy : 'created_at';
+    const safeOrder = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+    sql += ` ORDER BY ${safeSortBy} ${safeOrder};`;
+
+    const { rows } = await pool.query(sql, values);
     return rows.map(parseDriverRow);
 }
 

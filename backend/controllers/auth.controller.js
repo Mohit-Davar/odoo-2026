@@ -143,7 +143,9 @@ export const verifyRegisterOtp = async (req, res) => {
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
             secure: false,
-            sameSite: "strict"
+            sameSite: "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+            path: "/"
         });
         return res.status(200).json({ accessToken });
     } catch (err) {
@@ -225,7 +227,9 @@ export const verifyLoginOtp = async (req, res) => {
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
             secure: false,
-            sameSite: "strict",
+            sameSite: "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+            path: "/"
         });
 
         return res.json({ accessToken });

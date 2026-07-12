@@ -56,14 +56,16 @@ export const registerDriver = async (req, res) => {
  */
 
 /**
- * Retrieves all registered drivers.
+ * Retrieves all registered drivers, with optional filtering, searching, and sorting.
  * @param {GetDriversRequest} req The Express request object.
  * @param {GetDriversResponse} res The Express response object.
  * @returns {Promise<GetDriversResponse>}
  */
 export const getDrivers = async (req, res) => {
     try {
-        const drivers = await getAllDrivers();
+        const { search, status, sortBy, order } = req.query;
+        const filters = { search, status, sortBy, order };
+        const drivers = await getAllDrivers(filters);
         return res.status(200).json(drivers);
     } catch (error) {
         return res.status(500).json({

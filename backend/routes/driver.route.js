@@ -7,14 +7,20 @@ import {
     deleteDriverRecord
 } from "../controllers/driver.controller.js";
 import { verifyAccessToken } from "../middleware/auth.js";
+import { requireRoles } from "../middleware/rbac.js";
 
 const router = express.Router();
 
-// Apply auth middleware to protect driver administration endpoints
-router.post("/", verifyAccessToken, registerDriver);
-router.get("/", verifyAccessToken, getDrivers);
-router.get("/:id", verifyAccessToken, getDriverDetail);
-router.put("/:id", verifyAccessToken, updateDriverDetails);
-router.delete("/:id", verifyAccessToken, deleteDriverRecord);
+// Define allowed roles based on description.md matrix
+const viewRoles = ["FLEET_MANAGER", "DISPATCHER", "SAFETY_OFFICER", "FINANCIAL_ANALYST"];
+const crudRoles = ["SAFETY_OFFICER"];
+
+router.use(verifyAccessToken);
+
+router.get("/", requireRoles(viewRoles), getDrivers);
+router.get("/:id", requireRoles(viewRoles), getDriverDetail);
+router.post("/", requireRoles(crudRoles), registerDriver);
+router.put("/:id", requireRoles(crudRoles), updateDriverDetails);
+router.delete("/:id", requireRoles(crudRoles), deleteDriverRecord);
 
 export default router;

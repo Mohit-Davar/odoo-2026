@@ -185,3 +185,17 @@ ON expenses
     (
         trip_id
     );
+
+-- ===========================
+-- VEHICLE DOCUMENTS
+-- ===========================
+CREATE TABLE vehicle_documents (
+    id BIGSERIAL PRIMARY KEY,
+    vehicle_id BIGINT NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+    document_name VARCHAR(150) NOT NULL,
+    file_url VARCHAR(255) NOT NULL,
+    cloudinary_public_id VARCHAR(150) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_vehicle_documents_vehicle_id ON vehicle_documents(vehicle_id);

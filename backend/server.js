@@ -13,6 +13,8 @@ import expenseRoutes from "./routes/expense.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
 import aiRoutes from "./routes/ai.routes.js";
+import documentRoutes from "./routes/document.routes.js";
+import scheduleEmailReminders from "./utils/cron.js";
 
 const app = express();
 
@@ -25,6 +27,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 connectDB();
+scheduleEmailReminders();
 
 app.use("/api/auth", authRoutes);
 app.use("/api/vehicles", vehicleRouter);
@@ -37,6 +40,7 @@ app.use("/api/expenses", expenseRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/documents", documentRoutes);
 
 app.get("/",(req , res)=>{
     res.json({

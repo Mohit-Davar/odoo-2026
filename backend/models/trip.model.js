@@ -51,10 +51,51 @@ export async function getTripById(id) {
     return parseTripRow(rows[0]);
 }
 
-export async function getAllTrips() {
-    const sql = `SELECT * FROM trips ORDER BY created_at DESC;`;
-    const { rows } = await pool.query(sql);
-    return rows.map(parseTripRow);
+export async function getAllTrips(filters = {}) {
+    const { search, status, sortBy = 'created_at', order = 'DESC' } = filters;
+    let sql = `
+        SELECT 
+            t.*,
+            v.vehicle_name,
+            v.registration_number,
+            d.full_name as driver_name
+        FROM trips t
+        LEFT JOIN vehicles v ON t.vehicle_id = v.id
+        LEFT JOIN drivers d ON t.driver_id = d.id
+    `;
+    
+    const values = [];
+    const whereClauses = [];
+
+    if (search) {
+        values.push(`%${search}%`);
+        const searchIndex = values.length;
+        whereClauses.push(`(t.trip_code ILIKE ${searchIndex} OR t.source ILIKE ${searchIndex} OR t.destination ILIKE ${searchIndex} OR v.vehicle_name ILIKE ${searchIndex} OR d.full_name ILIKE ${searchIndex})`);
+    }
+
+    if (status) {
+        values.push(status);
+        whereClauses.push(`t.status = ${values.length}`);
+    }
+
+    if (whereClauses.length > 0) {
+        sql += ` WHERE ${whereClauses.join(' AND ')}`;
+    }
+
+    const allowedSortBy = ['trip_code', 'source', 'destination', 'status', 'created_at', 'dispatched_at', 'completed_at'];
+    const safeSortBy = allowedSortBy.includes(sortBy) ? `t.${sortBy}` : 't.created_at';
+    const safeOrder = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+    sql += ` ORDER BY ${safeSortBy} ${safeOrder};`;
+
+    const { rows } = await pool.query(sql, values);
+    // The parse function needs to be adjusted to handle the joined fields
+    return rows.map(row => ({
+        ...parseTripRow(row),
+        vehicleName: row.vehicle_name,
+        registrationNumber: row.registration_number,
+        driverName: row.driver_name
+    }));
 }
 
 export async function updateTripStatusTransaction(client, tripId, status, extraData = {}) {

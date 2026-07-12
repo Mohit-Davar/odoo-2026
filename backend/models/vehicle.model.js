@@ -52,16 +52,46 @@ export async function findVehicleById(id) {
 }
 
 /**
- * Retrieves all vehicles in the database
+ * Retrieves all vehicles in the database with optional filtering, searching, and sorting
+ * @param {object} filters - Optional filters for the query
+ * @param {string} filters.search - A search term to match against registration number or name
+ * @param {string} filters.status - A specific vehicle status to filter by
+ * @param {string} filters.sortBy - The column to sort by (default: 'created_at')
+ * @param {string} filters.order - The sort order ('ASC' or 'DESC', default: 'DESC')
  * @returns {Promise<Array>} List of vehicles
  */
-export async function getAllVehicles() {
-    const sql = `
+export async function getAllVehicles(filters = {}) {
+    const { search, status, sortBy = 'created_at', order = 'DESC' } = filters;
+    let sql = `
         SELECT id, registration_number, vehicle_name, vehicle_type, max_load_capacity_kg, odometer_km, acquisition_cost, status, created_at, updated_at
         FROM vehicles
-        ORDER BY created_at DESC;
     `;
-    const { rows } = await pool.query(sql);
+    
+    const values = [];
+    const whereClauses = [];
+
+    if (search) {
+        values.push(`%${search}%`);
+        whereClauses.push(`(registration_number ILIKE ${values.length} OR vehicle_name ILIKE ${values.length})`);
+    }
+
+    if (status) {
+        values.push(status);
+        whereClauses.push(`status = ${values.length}`);
+    }
+
+    if (whereClauses.length > 0) {
+        sql += ` WHERE ${whereClauses.join(' AND ')}`;
+    }
+
+    // Basic protection against SQL injection in sortBy
+    const allowedSortBy = ['registration_number', 'vehicle_name', 'vehicle_type', 'max_load_capacity_kg', 'odometer_km', 'status', 'created_at'];
+    const safeSortBy = allowedSortBy.includes(sortBy) ? sortBy : 'created_at';
+    const safeOrder = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+    sql += ` ORDER BY ${safeSortBy} ${safeOrder};`;
+
+    const { rows } = await pool.query(sql, values);
     return rows.map(parseVehicleRow);
 }
 

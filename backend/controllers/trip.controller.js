@@ -253,14 +253,16 @@ export const cancelTrip = async (req, res) => {
  */
 
 /**
- * Lists all trips.
+ * Lists all trips, with optional filtering, searching, and sorting.
  * @param {ListTripsRequest} req The Express request object.
  * @param {ListTripsResponse} res The Express response object.
  * @returns {Promise<ListTripsResponse>}
  */
 export const listTrips = async (req, res) => {
     try {
-        const trips = await getAllTrips();
+        const { search, status, sortBy, order } = req.query;
+        const filters = { search, status, sortBy, order };
+        const trips = await getAllTrips(filters);
         return res.status(200).json({ trips });
     } catch (error) {
         console.error("Error listing trips:", error);

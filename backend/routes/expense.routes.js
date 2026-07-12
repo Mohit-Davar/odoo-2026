@@ -11,9 +11,8 @@ import { requireRoles } from "../middleware/rbac.js";
 
 const router = express.Router();
 
-// Per description.md: Financial Analyst → CRUD; all others → View only
-const viewRoles = ["Fleet Manager", "Dispatcher", "Safety Officer", "Financial Analyst"];
-const crudRoles = ["Financial Analyst"];
+const viewRoles = ["FLEET_MANAGER", "DISPATCHER", "SAFETY_OFFICER", "FINANCIAL_ANALYST"];
+const crudRoles = ["FINANCIAL_ANALYST"];
 
 router.use(verifyAccessToken);
 
