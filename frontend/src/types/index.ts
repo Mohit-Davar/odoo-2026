@@ -41,6 +41,7 @@ export interface Trip {
   status: TripStatus;
   dispatched_at?: string | null;
   completed_at?: string | null;
+  revenue?: number | null;
 }
 
 export interface MaintenanceLog {

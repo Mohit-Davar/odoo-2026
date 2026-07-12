@@ -40,8 +40,8 @@ export default function DriversPage() {
   };
 
   const filteredDrivers = drivers.filter(d => 
-    d.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    d.licenseNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+    d.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    d.license_number?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleAddDriver = async () => {
@@ -74,11 +74,11 @@ export default function DriversPage() {
 
     setIsSubmitting(true);
     const res = await addDriver({
-      fullName,
-      licenseNumber,
-      licenseCategory,
-      licenseExpiryDate: new Date(licenseExpiryDate).toISOString(),
-      contactNumber,
+      full_name: fullName,
+      license_number: licenseNumber,
+      license_category: licenseCategory,
+      license_expiry_date: new Date(licenseExpiryDate).toISOString(),
+      contact_number: contactNumber,
       rating: 100, // Default rating for new drivers
       status: 'AVAILABLE'
     });
@@ -174,11 +174,11 @@ export default function DriversPage() {
             <TableBody>
               {filteredDrivers.map((driver) => (
                 <TableRow key={driver.id} className="hover:bg-neutral-50/50">
-                  <TableCell className="px-4 py-3 font-medium">{driver.fullName}</TableCell>
-                  <TableCell className="px-4 py-3">{driver.licenseNumber}</TableCell>
-                  <TableCell className="px-4 py-3">{driver.licenseCategory}</TableCell>
-                  <TableCell className="px-4 py-3">{driver.licenseExpiryDate ? new Date(driver.licenseExpiryDate).toLocaleDateString() : ''}</TableCell>
-                  <TableCell className="px-4 py-3">{driver.contactNumber}</TableCell>
+                  <TableCell className="px-4 py-3 font-medium">{driver.full_name}</TableCell>
+                  <TableCell className="px-4 py-3">{driver.license_number}</TableCell>
+                  <TableCell className="px-4 py-3">{driver.license_category}</TableCell>
+                  <TableCell className="px-4 py-3">{driver.license_expiry_date ? new Date(driver.license_expiry_date).toLocaleDateString() : ''}</TableCell>
+                  <TableCell className="px-4 py-3">{driver.contact_number}</TableCell>
                   <TableCell className="px-4 py-3">{driver.tripCompletedCount || 0}</TableCell>
                   <TableCell className="px-4 py-3">
                     <span className={`font-semibold ${driver.rating >= 90 ? 'text-green-600' : driver.rating >= 75 ? 'text-amber-600' : 'text-red-600'}`}>

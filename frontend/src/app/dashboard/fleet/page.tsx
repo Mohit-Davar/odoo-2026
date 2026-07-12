@@ -44,14 +44,14 @@ export default function FleetPage() {
   };
 
   const filteredVehicles = vehicles.filter(v => {
-    const matchesSearch = v.registrationNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          v.vehicleName?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = typeFilter === "All" || v.vehicleType === typeFilter;
+    const matchesSearch = v.registration_number?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          v.vehicle_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = typeFilter === "All" || v.vehicle_type === typeFilter;
     const matchesStatus = statusFilter === "All" || v.status === statusFilter;
     return matchesSearch && matchesType && matchesStatus;
   });
 
-  const uniqueTypes = Array.from(new Set(vehicles.map(v => v.vehicleType)));
+  const uniqueTypes = Array.from(new Set(vehicles.map(v => v.vehicle_type)));
 
   const handleAddVehicle = async () => {
     if (!regNo || !name || !type || !capacity || !cost) return;
@@ -67,12 +67,12 @@ export default function FleetPage() {
 
     setIsSubmitting(true);
     const res = await addVehicle({
-      registrationNumber: regNo,
-      vehicleName: name,
-      vehicleType: type,
-      maxLoadCapacityKg: Number(capacity),
-      odometerKm: Number(odometer) || 0,
-      acquisitionCost: Number(cost),
+      registration_number: regNo,
+      vehicle_name: name,
+      vehicle_type: type,
+      max_load_capacity_kg: Number(capacity),
+      odometer_km: Number(odometer) || 0,
+      acquisition_cost: Number(cost),
       status: 'AVAILABLE'
     });
     if (res.ok) {
@@ -99,7 +99,7 @@ export default function FleetPage() {
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold text-neutral-900 geist-mono tracking-tighter">
-            Vehicle Registry
+            Fleet Registry & Lifecycle
           </h1>
         </div>
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
@@ -114,7 +114,7 @@ export default function FleetPage() {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label>Registration Number</Label>
+                <Label>Registration Number (Unique)</Label>
                 <Input value={regNo} onChange={(e) => setRegNo(e.target.value)} placeholder="e.g. MH12AB1234" />
               </div>
               <div className="space-y-2">
@@ -200,12 +200,12 @@ export default function FleetPage() {
             <TableBody>
               {filteredVehicles.map((vehicle) => (
                 <TableRow key={vehicle.id} className="hover:bg-neutral-50/50">
-                  <TableCell className="px-4 py-3 font-medium">{vehicle.registrationNumber}</TableCell>
-                  <TableCell className="px-4 py-3">{vehicle.vehicleName}</TableCell>
-                  <TableCell className="px-4 py-3">{vehicle.vehicleType}</TableCell>
-                  <TableCell className="px-4 py-3">{vehicle.maxLoadCapacityKg} kg</TableCell>
-                  <TableCell className="px-4 py-3">{vehicle.odometerKm?.toLocaleString()} km</TableCell>
-                  <TableCell className="px-4 py-3">₹{vehicle.acquisitionCost?.toLocaleString()}</TableCell>
+                  <TableCell className="px-4 py-3 font-medium">{vehicle.registration_number}</TableCell>
+                  <TableCell className="px-4 py-3">{vehicle.vehicle_name}</TableCell>
+                  <TableCell className="px-4 py-3">{vehicle.vehicle_type}</TableCell>
+                  <TableCell className="px-4 py-3">{vehicle.max_load_capacity_kg} kg</TableCell>
+                  <TableCell className="px-4 py-3">{vehicle.odometer_km?.toLocaleString()} km</TableCell>
+                  <TableCell className="px-4 py-3">₹{vehicle.acquisition_cost?.toLocaleString()}</TableCell>
                   <TableCell className="px-4 py-3">{getStatusBadge(vehicle.status)}</TableCell>
                 </TableRow>
               ))}
