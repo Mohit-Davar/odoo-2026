@@ -2,7 +2,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const Button = React.forwardRef(
-  ({ className, variant = "default", size = "default", ...props }, ref) => {
+  ({ className, variant = "default", size = "default", children, ...props }, ref) => {
     return (
       <button
         className={cn(
@@ -26,7 +26,9 @@ const Button = React.forwardRef(
         )}
         ref={ref}
         {...props}
-      />
+      >
+        {children}
+      </button>
     );
   }
 );
