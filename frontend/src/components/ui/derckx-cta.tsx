@@ -21,14 +21,14 @@ export default function DerckxCTA() {
   return (
     <section className="relative w-full overflow-hidden bg-neutral-950 border-t border-neutral-900 z-20">
       
-      {/* Office Window Reflection Backdrop */}
+      {/* Night highway backdrop */}
       <div className="absolute inset-0 z-0">
         <img
-          src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1200"
+          src="https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&q=80&w=1600"
           alt=""
-          className="w-full h-full object-cover opacity-15"
+          className="w-full h-full object-cover opacity-40"
         />
-        <div className="absolute inset-0 bg-black/80" />
+        <div className="absolute inset-0 bg-gradient-to-r from-neutral-950 via-neutral-950/85 to-neutral-950/50" />
       </div>
 
       <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-12 py-28 px-6 sm:px-12 lg:px-16 relative z-10 items-center">
