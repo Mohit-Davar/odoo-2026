@@ -11,6 +11,7 @@ function parseUserRow(row) {
         email: row.email,
         password: row.password,
         refreshToken: row.refresh_token,
+        roleId: row.role_id,
         verified: row.verified,
         createdAt: row.created_at,
         updatedAt: row.updated_at
@@ -26,8 +27,8 @@ function parseUserRow(row) {
  */
 export async function findUserByEmail(email, { includePassword = true } = {}) {
     const selectFields = includePassword
-        ? "id, name, email, password, refresh_token, verified, created_at, updated_at"
-        : "id, name, email, refresh_token, verified, created_at, updated_at";
+        ? "id, name, email, password, role_id, refresh_token, verified, created_at, updated_at"
+        : "id, name, email, role_id, refresh_token, verified, created_at, updated_at";
 
     const sql = `
         SELECT ${selectFields} 
@@ -46,7 +47,7 @@ export async function findUserByEmail(email, { includePassword = true } = {}) {
  */
 export async function findUserByRefreshToken(token) {
     const sql = `
-        SELECT id, name, email, password, refresh_token, verified, created_at, updated_at 
+        SELECT id, name, email, password, role_id, refresh_token, verified, created_at, updated_at 
         FROM users 
         WHERE refresh_token = $1 
         LIMIT 1;
@@ -64,8 +65,8 @@ export async function findUserByRefreshToken(token) {
  */
 export async function findUserById(id, { includePassword = true } = {}) {
     const selectFields = includePassword
-        ? "id, name, email, password, refresh_token, verified, created_at, updated_at"
-        : "id, name, email, refresh_token, verified, created_at, updated_at";
+        ? "id, name, email, password, role_id, refresh_token, verified, created_at, updated_at"
+        : "id, name, email, role_id, refresh_token, verified, created_at, updated_at";
 
     const sql = `
         SELECT ${selectFields} 
@@ -86,7 +87,7 @@ export async function createUser(userData) {
     const sql = `
         INSERT INTO users (name, email, password, refresh_token, verified)
         VALUES ($1, $2, $3, $4, $5)
-        RETURNING id, name, email, password, refresh_token, verified, created_at, updated_at;
+        RETURNING id, name, email, password, role_id, refresh_token, verified, created_at, updated_at;
     `;
     const values = [
         userData.name,
@@ -115,7 +116,7 @@ export async function updateUser(id, updateData) {
             verified = $5, 
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $6
-        RETURNING id, name, email, password, refresh_token, verified, created_at, updated_at;
+        RETURNING id, name, email, password, role_id, refresh_token, verified, created_at, updated_at;
     `;
     const values = [
         updateData.name,
