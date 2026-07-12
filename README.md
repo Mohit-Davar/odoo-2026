@@ -4,6 +4,58 @@ TransitOps is a centralized, enterprise-grade Transport Operations Platform desi
 
 ---
 
+## 🎯 Project Objectives & Target Users
+
+The platform supports multiple organization roles through a robust Role-Based Access Control (RBAC) structure:
+
+* **Fleet Manager**: Registers vehicles, updates vehicle details, manages maintenance intervals, and monitors fleet status.
+* **Dispatcher**: Creates transport routes, plans cargo, pairs drivers and vehicles, and dispatches trips.
+* **Safety Officer**: Monitors driver license validity, updates compliance details, and tracks driver safety ratings.
+* **Financial Analyst**: Records fuel consumption logs, tracks operational expenses (tolls, maintenance, etc.), and reviews fleet ROI.
+
+---
+
+## ⚙️ Core Platform Modules
+
+1. **Dashboard & KPIs**: Real-time view of active/available vehicles, vehicles in maintenance, active trips, pending trips, drivers on duty, and total fleet utilization metrics.
+2. **Vehicle Registry**: Maintains detailed asset profiles including registration number, vehicle type, max load capacity, acquisition costs, and current status.
+3. **Driver Management**: Tracks safety scores, license categories, and license validity to ensure compliance.
+4. **Trip Management**: Handles the full trip lifecycle (`Draft` &rarr; `Dispatched` &rarr; `Completed` or `Cancelled`) and cascades status changes.
+5. **Maintenance Logging**: Tracks cost, description, and completion dates for servicing logs, automatically taking vehicles in and out of active service.
+6. **Fuel & Expense Tracking**: Logs fuel quantity and costs, toll charges, and maintenance fees, used directly to calculate vehicle ROI.
+7. **Reports & Analytics**: Generates downloadable CSV exports for Fuel Efficiency, Fleet Utilization, Operational Costs, and individual Vehicle ROI.
+
+---
+
+## 🛡️ Mandatory Business Rules Enforced
+
+The system strictly validates and enforces the following business logic at database and controller levels:
+* **Retired/In-Shop Vehicles**: Blocked from being assigned to any new trip.
+* **Non-Compliant Drivers**: Drivers with expired licenses or suspended status cannot be assigned.
+* **Double Booking Prevention**: Active vehicles and drivers already on an active trip are blocked from multi-booking.
+* **Cargo Load Validation**: Cargo weight must never exceed the maximum load capacity of the selected vehicle.
+* **Automatic Status Cascade**:
+  * Dispatching a trip automatically transitions both the vehicle and driver status to `ON_TRIP`.
+  * Completing a trip restores both the vehicle and driver status to `AVAILABLE`.
+  * Creating an active maintenance log changes the vehicle status to `IN_SHOP`; closing it restores it to `AVAILABLE`.
+
+---
+
+## 📊 Role Permission Matrix
+
+| Module | Fleet Manager | Dispatcher | Safety Officer | Financial Analyst |
+| :--- | :---: | :---: | :---: | :---: |
+| **Dashboard** | ✅ | ✅ | ✅ | ✅ |
+| **Vehicles** | CRUD | View | View | View |
+| **Drivers** | View | View | CRUD | View |
+| **Trips** | View | CRUD | View | View |
+| **Maintenance** | CRUD | View | View | View |
+| **Fuel Logs** | View | View | View | CRUD |
+| **Expenses** | View | View | View | CRUD |
+| **Analytics** | ✅ | View | View | ✅ |
+
+---
+
 ## 🏗️ Architecture Overview
 
 The project is structured as a monorepo consisting of three main services:
