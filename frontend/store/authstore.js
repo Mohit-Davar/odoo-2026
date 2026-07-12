@@ -1,6 +1,13 @@
 import { create } from "zustand";
-import axiosInstance, { setAccessToken } from "../lib/axiosInstance.js";
+import axiosInstance, { setAccessToken, getAccessToken } from "../lib/axiosInstance.js";
 import { persist } from "zustand/middleware";
+
+// Track whether session restoration has completed
+let sessionRestored = false;
+let sessionRestorePromise = null;
+
+export const waitForSession = () => sessionRestorePromise;
+export const isSessionRestored = () => sessionRestored;
 
 export const useAuthStore = create(
   persist(
@@ -11,22 +18,33 @@ export const useAuthStore = create(
       pendingAction: null,
 
       restoreSession: async () => {
-        try {
-          const res = await axiosInstance.get("/auth/refresh");
-          const accessToken = res.data.accessToken;
-          setAccessToken(accessToken);
-
-          const userRes = await axiosInstance.get("/auth/me");
-          set({ user: userRes.data, loading: false });
-        } catch (error) {
-          // Silent fail - no active session is expected when user is logged out
-          setAccessToken(null);
-          set({ user: null, loading: false });
-          // Only log if it's not a 401 (unauthorized) error
-          if (error.response?.status !== 401) {
-            console.error("Session restore failed:", error.message);
-          }
+        // Prevent duplicate restore calls
+        if (sessionRestorePromise) {
+          return sessionRestorePromise;
         }
+
+        sessionRestorePromise = (async () => {
+          try {
+            const res = await axiosInstance.get("/auth/refresh");
+            const accessToken = res.data.accessToken;
+            setAccessToken(accessToken);
+
+            const userRes = await axiosInstance.get("/auth/me");
+            set({ user: userRes.data, loading: false });
+          } catch (error) {
+            // Silent fail - no active session is expected when user is logged out
+            setAccessToken(null);
+            set({ user: null, loading: false });
+            // Only log if it's not a 401 (unauthorized) error
+            if (error.response?.status !== 401 && error.response?.status !== 403) {
+              console.error("Session restore failed:", error.message);
+            }
+          } finally {
+            sessionRestored = true;
+          }
+        })();
+
+        return sessionRestorePromise;
       },
 
       login: async (email, password) => {
@@ -150,6 +168,9 @@ export const useAuthStore = create(
         await axiosInstance.post("/auth/logout");
         set({ user: null });
         setAccessToken(null);
+        // Reset session restore state so next login can restore properly
+        sessionRestored = false;
+        sessionRestorePromise = null;
       },
     }),
     {
