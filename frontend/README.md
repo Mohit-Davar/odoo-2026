@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TransitOps — Frontend Client
 
-## Getting Started
+This is the Next.js React client application. It provides a responsive web interface for managing fleet operations, showing real-time dashboard KPIs, and scheduling dispatches.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 📂 Project Structure
+
+```
+frontend/
+├── src/
+│   ├── app/             # Next.js Pages (trips, fleet, analytics, settings)
+│   ├── components/      # UI components (cards, tables, badges, loaders)
+│   ├── store/           # Zustand stores (state management)
+│   └── types/           # TypeScript interface definitions
+├── store/               # Auth persist state store
+└── lib/                 # Axios configuration
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🔄 State Management (Zustand Stores)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 1. `useAuthStore` (`/store/authstore.js`)
+Handles authentication lifecycle, OTP states, login, registration, and session restoration:
+```js
+const { user, loading, login, register, logout, restoreSession } = useAuthStore();
+```
 
-## Learn More
+### 2. `useAppStore` (`/src/store/useAppStore.ts`)
+Manages fleet dashboard data, available vehicles, active drivers, current dispatches, and analytic reports:
+```ts
+const { vehicles, drivers, trips, fetchAllData, addTrip, dispatchTrip, completeTrip } = useAppStore();
+```
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## ⚡ API Client (`lib/axiosInstance.js`)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Axios is preconfigured to handle token rotation seamlessly:
+* **Automatic Token Injection**: Automatically attaches the Bearer JWT access token to all outgoing API headers.
+* **Token Rotation Interceptor**: If an API request returns `401 Unauthorized` or `403 Forbidden` due to access token expiry, the interceptor automatically queues the request, makes a refresh request to `/api/auth/refresh`, updates the token, and retries the queued requests without interrupting the user.
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🚀 AI Feature Integration Templates
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+To add the AI chat assistant or suggestion tool to any page, use the following React hook patterns:
+
+### 1. Consult AI Dispatcher (Form integration)
+When creating a trip, call the optimizer endpoint directly to prefill the vehicle and driver selections:
+
+```tsx
+import axiosInstance from "@/lib/axiosInstance";
+
+const handleSuggestPairing = async () => {
+  try {
+    const res = await axiosInstance.post("/ai/optimize-dispatch", {
+      trips: [{ source, destination, cargoWeightKg, plannedDistanceKm }]
+    });
+    
+    if (res.data.assignments?.length > 0) {
+      const match = res.data.assignments[0];
+      setVehicleId(match.assignedVehicleId.toString());
+      setDriverId(match.assignedDriverId.toString());
+      setReason(match.recommendationReason);
+    }
+  } catch (err) {
+    console.error("AI matching failed:", err);
+  }
+};
+```
+
+### 2. Floating AI Assistant Chatbox
+Add a side panel to layout to query system statistics:
+
+```tsx
+const handleSendChat = async (message: string, history: Array<{role: string, content: string}>) => {
+  const res = await axiosInstance.post("/ai/chat", { message, history });
+  return res.data.reply; // Returns chatbot response
+};
+```
