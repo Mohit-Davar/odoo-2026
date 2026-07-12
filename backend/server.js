@@ -12,6 +12,7 @@ import fuelRoutes from "./routes/fuel.routes.js";
 import expenseRoutes from "./routes/expense.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
+import aiRoutes from "./routes/ai.routes.js";
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.use("/api/fuel", fuelRoutes);
 app.use("/api/expenses", expenseRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/ai", aiRoutes);
 
 app.get("/",(req , res)=>{
     res.json({
