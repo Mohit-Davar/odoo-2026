@@ -19,7 +19,7 @@ export default function SettingsPage() {
   const [newUserData, setNewUserData] = useState({ name: "", email: "", password: "", roleId: "3" });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isAdmin = user?.role_id === 1 || user?.role_name === "ADMIN";
+  const isAdmin = user?.roleId === 1 || user?.role_id === 1 || user?.role_name === "ADMIN";
 
   useEffect(() => {
     if (isAdmin) {
