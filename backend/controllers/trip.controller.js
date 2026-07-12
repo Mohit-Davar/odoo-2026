@@ -150,7 +150,7 @@ export const completeTrip = async (req, res) => {
     if (!bodyValidation.success) {
         return res.status(400).json({ errors: bodyValidation.error.format() });
     }
-    const { endOdometerKm } = bodyValidation.data;
+    const { endOdometerKm, revenue } = bodyValidation.data;
 
     const client = await pool.connect();
     try {
@@ -175,7 +175,12 @@ export const completeTrip = async (req, res) => {
         }
         await client.query("UPDATE drivers SET status = 'AVAILABLE' WHERE id = $1", [trip.driver_id]);
 
-        const updatedTrip = await updateTripStatusTransaction(client, trip.id, 'COMPLETED');
+        const extraData = {};
+        if (revenue !== undefined) {
+            extraData.revenue = revenue;
+        }
+
+        const updatedTrip = await updateTripStatusTransaction(client, trip.id, 'COMPLETED', extraData);
 
         await client.query('COMMIT');
         return res.status(200).json({ message: "Trip completed successfully", trip: updatedTrip });

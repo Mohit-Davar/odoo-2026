@@ -1,15 +1,20 @@
 import { z } from 'zod';
 
-export const expenseTypeEnum = z.enum(['TOLL', 'MAINTENANCE', 'OTHER']);
+const expenseTypeEnum = z.enum(['FUEL', 'MAINTENANCE', 'TOLL', 'OTHER']);
 
 /**
- * Schema for logging a new transport expense.
+ * Schema for creating a new expense.
  */
 export const createExpenseSchema = z.object({
-    tripId: z.coerce.number().int().positive().optional().nullable(),
-    vehicleId: z.coerce.number().int().positive().optional().nullable(),
+    amount: z.number().positive('Amount must be a positive number.'),
+    notes: z.string().optional(),
     expenseType: expenseTypeEnum,
-    amount: z.number().min(0, "Expense amount cannot be negative."),
-    expenseDate: z.coerce.date({ message: "Invalid date format for expense date." }),
-    notes: z.string().optional().nullable()
+    expenseDate: z.coerce.date(),
+    vehicleId: z.number().int().positive().optional(),
+    tripId: z.number().int().positive().optional(),
 });
+
+/**
+ * Schema for updating an expense. All fields are optional.
+ */
+export const updateExpenseSchema = createExpenseSchema.partial();

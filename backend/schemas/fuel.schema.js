@@ -1,12 +1,17 @@
 import { z } from 'zod';
 
 /**
- * Schema for registering a new fuel log.
+ * Schema for creating a new fuel log.
  */
 export const createFuelLogSchema = z.object({
-    vehicleId: z.coerce.number().int().positive("Vehicle ID must be a positive integer."),
-    tripId: z.coerce.number().int().positive().optional().nullable(),
-    fuelDate: z.coerce.date({ message: "Invalid date format for fuel date." }),
-    litres: z.number().positive("Litres must be greater than 0."),
-    totalCost: z.number().min(0, "Total cost cannot be negative.")
+    vehicleId: z.number().int().positive(),
+    tripId: z.number().int().positive().optional(),
+    fuelDate: z.coerce.date(),
+    litres: z.number().positive(),
+    totalCost: z.number().positive(),
 });
+
+/**
+ * Schema for updating a fuel log. All fields are optional.
+ */
+export const updateFuelLogSchema = createFuelLogSchema.partial();

@@ -17,4 +17,5 @@ export const createDraftTripSchema = z.object({
  */
 export const completeTripSchema = z.object({
     endOdometerKm: z.number().nonnegative("Odometer reading must be a non-negative number.").optional(),
+    revenue: z.number().nonnegative("Revenue must be a non-negative number.").optional(),
 });

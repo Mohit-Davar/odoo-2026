@@ -13,6 +13,7 @@ function parseTripRow(row) {
         plannedDistanceKm: parseFloat(row.planned_distance_km),
         startOdometerKm: row.start_odometer_km ? parseFloat(row.start_odometer_km) : null,
         endOdometerKm: row.end_odometer_km ? parseFloat(row.end_odometer_km) : null,
+        revenue: row.revenue ? parseFloat(row.revenue) : 0,
         status: row.status,
         dispatchedAt: row.dispatched_at,
         completedAt: row.completed_at,
@@ -56,11 +57,15 @@ export async function getAllTrips() {
     return rows.map(parseTripRow);
 }
 
-export async function updateTripStatusTransaction(client, tripId, status) {
+export async function updateTripStatusTransaction(client, tripId, status, extraData = {}) {
     // Transactional helper, assumes a client is passed
     let extraUpdates = "";
     if (status === 'DISPATCHED') extraUpdates = ", dispatched_at = CURRENT_TIMESTAMP";
     else if (status === 'COMPLETED') extraUpdates = ", completed_at = CURRENT_TIMESTAMP";
+
+    if (extraData.revenue !== undefined) {
+        extraUpdates += `, revenue = ${extraData.revenue}`;
+    }
 
     const sql = `
         UPDATE trips
