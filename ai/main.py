@@ -51,8 +51,8 @@ class ChatRequest(BaseModel):
 
 class OptimizationRequest(BaseModel):
     trips: List[dict]
-    vehicles: List[dict]
-    drivers: List[dict]
+    vehicles: Optional[List[dict]] = []
+    drivers: Optional[List[dict]] = []
 
 @app.get("/")
 def read_root():
@@ -144,12 +144,27 @@ async def chat(request: ChatRequest):
 
 @app.post("/api/ai/optimize-dispatch")
 async def optimize_dispatch(request: OptimizationRequest):
-    # Fallback to smart logic if no live LLM configured
+    # Context Enrichment: Fetch live available vehicles and drivers if not passed in request
+    vehicles = request.vehicles
+    if not vehicles:
+        from tools.vehicle_tools import get_vehicles_by_status
+        vehicles = await get_vehicles_by_status("AVAILABLE")
+        
+    drivers = request.drivers
+    if not drivers:
+        from tools.driver_tools import get_drivers_by_status
+        drivers = await get_drivers_by_status("AVAILABLE")
+        
+    # Get active license expiry warnings
+    from tools.driver_tools import get_driver_license_alerts
+    expiry_alerts = await get_driver_license_alerts(30)
+    
+    # Fallback smart matching logic if no live LLM is configured
     if not llm:
         assignments = []
         for i, trip in enumerate(request.trips):
-            vehicle = request.vehicles[i % len(request.vehicles)] if request.vehicles else {"id": "None", "registrationNumber": "N/A"}
-            driver = request.drivers[i % len(request.drivers)] if request.drivers else {"id": "None", "fullName": "N/A"}
+            vehicle = vehicles[i % len(vehicles)] if vehicles else {"id": "None", "registrationNumber": "N/A"}
+            driver = drivers[i % len(drivers)] if drivers else {"id": "None", "fullName": "N/A"}
             assignments.append({
                 "tripId": trip.get("id"),
                 "origin": trip.get("origin"),
@@ -158,35 +173,49 @@ async def optimize_dispatch(request: OptimizationRequest):
                 "assignedVehicleName": vehicle.get("vehicleName", "N/A"),
                 "assignedDriverId": driver.get("id"),
                 "assignedDriverName": driver.get("fullName", "N/A"),
-                "recommendationReason": "Round-robin matching (Mock Mode - set OPENAI_API_KEY for dynamic AI matching)."
+                "recommendationReason": "Smart matching fallback (Mock Mode - set OPENAI_API_KEY for dynamic AI matching)."
             })
         return {"assignments": assignments, "mock": True}
         
     try:
         prompt = f"""
-        You are a logistics dispatch optimization model.
-        Analyze the following inputs and recommend the best pairing of a vehicle and a driver for each trip.
-        Consider safety scores of drivers and load capacity constraints of vehicles.
+        You are an expert logistics coordinator and dispatch optimization model.
+        Recommend the best pairing of a vehicle and a driver for each trip based on the rules below.
+        
+        CRITICAL CONSTRAINTS & OPTIMIZATION CRITERIA:
+        1. VEHICLE LOAD CAPACITY: A vehicle must have a maxLoadCapacityKg greater than or equal to the cargoWeightKg of the trip. Do not overload a vehicle.
+        2. LICENSE MATCHING: The driver's license category must match the vehicle type:
+           - 'Heavy Truck', 'Dumper', or 'Tipper' requires a 'Heavy Transport' or commercial heavy license.
+           - 'Medium Truck' requires a 'Commercial Medium' or higher.
+           - 'Light Truck' or 'Pickup Van' requires a light commercial license or higher.
+        3. DRIVER SAFETY: Prioritize drivers with higher safety ratings/scores.
+        4. LICENSE EXPIRY: Avoid assigning drivers whose license is expired or expiring within 30 days.
+        5. VEHICLE ODOMETER: Avoid assigning vehicles with high mileage (odometerKm) to long trips to minimize breakdown risk. Prefer lower mileage vehicles for long runs.
+        
+        INPUT DATA:
         
         Trips to schedule:
         {json.dumps(request.trips, indent=2)}
         
         Available Vehicles:
-        {json.dumps(request.vehicles, indent=2)}
+        {json.dumps(vehicles, indent=2)}
         
         Available Drivers:
-        {json.dumps(request.drivers, indent=2)}
+        {json.dumps(drivers, indent=2)}
+        
+        Near-Expiry or Expired Driver Licenses:
+        {json.dumps(expiry_alerts, indent=2)}
         
         Return the response strictly as a JSON object of assignments with this format:
         {{
             "assignments": [
                 {{
-                    "tripId": "trip_id_here",
-                    "assignedVehicleId": "vehicle_id_here",
-                    "assignedVehicleName": "vehicle_name_here",
-                    "assignedDriverId": "driver_id_here",
-                    "assignedDriverName": "driver_name_here",
-                    "recommendationReason": "detailed explanation of why this vehicle and driver were matched"
+                    "tripId": <trip_id>,
+                    "assignedVehicleId": <vehicle_id>,
+                    "assignedVehicleName": <vehicle_name>,
+                    "assignedDriverId": <driver_id>,
+                    "assignedDriverName": <driver_name>,
+                    "recommendationReason": "detailed explanation of why this vehicle and driver were matched based on capacity, safety score, license validity, and odometer mileage"
                 }}
             ]
         }}
@@ -202,4 +231,5 @@ async def optimize_dispatch(request: OptimizationRequest):
         
         return json.loads(text)
     except Exception as e:
+        print(f"[AI Agent] Dispatch Optimization Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"LLM Dispatch Optimization Error: {str(e)}")
