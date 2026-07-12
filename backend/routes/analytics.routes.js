@@ -11,16 +11,12 @@ import { requireRoles } from "../middleware/rbac.js";
 
 const router = express.Router();
 
-// Per description.md: Fleet Manager + Financial Analyst get full analytics; others get View
-const analyticsRoles = ["Fleet Manager", "Financial Analyst"];
-const viewRoles = ["Fleet Manager", "Dispatcher", "Safety Officer", "Financial Analyst"];
+const analyticsRoles = ["FLEET_MANAGER", "FINANCIAL_ANALYST"];
+const viewRoles = ["FLEET_MANAGER", "DISPATCHER", "SAFETY_OFFICER", "FINANCIAL_ANALYST"];
 
 router.use(verifyAccessToken);
 
-// Combined summary
 router.get("/", requireRoles(analyticsRoles), getAnalyticsSummary);
-
-// Individual reports — all roles can view; ?format=csv for CSV download
 router.get("/fuel-efficiency", requireRoles(viewRoles), getFuelEfficiencyReport);
 router.get("/fleet-utilization", requireRoles(viewRoles), getFleetUtilizationReport);
 router.get("/operational-cost", requireRoles(viewRoles), getOperationalCostReport);

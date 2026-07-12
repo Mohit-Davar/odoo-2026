@@ -11,16 +11,12 @@ import { requireRoles } from "../middleware/rbac.js";
 
 const router = express.Router();
 
-// Define allowed roles based on description.md matrix
-const viewRoles = ["Fleet Manager", "Dispatcher", "Safety Officer", "Financial Analyst"];
-const crudRoles = ["Fleet Manager"];
+const viewRoles = ["FLEET_MANAGER", "DISPATCHER", "SAFETY_OFFICER", "FINANCIAL_ANALYST"];
+const crudRoles = ["FLEET_MANAGER"];
 
-// All endpoints require authentication
 router.use(verifyAccessToken);
-// View Vehicles
 router.get("/", requireRoles(viewRoles), getVehicles);
 router.get("/:id", requireRoles(viewRoles), getVehicleDetail);
-// Manage Vehicles
 router.post("/", requireRoles(crudRoles), registerVehicle);
 router.put("/:id", requireRoles(crudRoles), updateVehicleDetails);
 router.delete("/:id", requireRoles(crudRoles), deleteVehicleRecord);

@@ -5,8 +5,7 @@ import { requireRoles } from "../middleware/rbac.js";
 
 const router = express.Router();
 
-// All authenticated roles can view the dashboard
-const allRoles = ["Fleet Manager", "Dispatcher", "Safety Officer", "Financial Analyst"];
+const allRoles = ["FLEET_MANAGER", "DISPATCHER", "SAFETY_OFFICER", "FINANCIAL_ANALYST"];
 
 router.use(verifyAccessToken);
 
