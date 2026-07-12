@@ -12,6 +12,5 @@ client.on("error", function(err) {
 });
 await client.connect()
 console.log("Reddis Connected");
-await client.set('foo','bar');
 
 export default client;

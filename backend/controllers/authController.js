@@ -105,9 +105,6 @@ export const verifyRegisterOtp = async (req, res) => {
   }
 };
 
-// ----------- Login Stuff -----------
-
-
 export const login = async(req, res)=>{
     try{
         const {email , password} = req.body;
@@ -233,4 +230,3 @@ export const getOtpCooldown = async(req, res)=>{
         });
     }
 }
-
