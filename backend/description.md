@@ -1,4 +1,3 @@
-```markdown
 # TransitOps – Smart Transport Operations Platform
 
 ## Overview
@@ -604,4 +603,3 @@ The following features are optional but add additional value:
 # Technology Goal
 
 The primary focus of this project is not only implementing CRUD operations, but also building a robust transport operations platform that correctly models real-world logistics workflows by enforcing business rules, maintaining data consistency, automating operational state transitions, and providing actionable insights through dashboards and analytics.
-```
