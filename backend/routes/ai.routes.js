@@ -5,10 +5,10 @@ import { requireRoles } from "../middleware/rbac.js";
 const router = express.Router();
 
 // All roles can access the AI assistant
-const allRoles = ["Fleet Manager", "Dispatcher", "Safety Officer", "Financial Analyst"];
+const allRoles = ["FLEET_MANAGER", "DISPATCHER", "SAFETY_OFFICER", "FINANCIAL_ANALYST"];
 
 // Only Dispatchers can trigger the optimizer (trip assignment is their responsibility)
-const dispatchRoles = ["Dispatcher"];
+const dispatchRoles = ["DISPATCHER"];
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8001";
 

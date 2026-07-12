@@ -163,16 +163,16 @@ async def optimize_dispatch(request: OptimizationRequest):
     if not llm:
         assignments = []
         for i, trip in enumerate(request.trips):
-            vehicle = vehicles[i % len(vehicles)] if vehicles else {"id": "None", "registrationNumber": "N/A"}
+            vehicle = vehicles[i % len(vehicles)] if vehicles else {"id": "None", "registration_number": "N/A", "registrationNumber": "N/A", "vehicle_name": "N/A", "vehicleName": "N/A"}
             driver = drivers[i % len(drivers)] if drivers else {"id": "None", "fullName": "N/A"}
             assignments.append({
                 "tripId": trip.get("id"),
-                "origin": trip.get("origin"),
-                "destination": trip.get("destination"),
+                "origin": trip.get("origin") or trip.get("source") or "N/A",
+                "destination": trip.get("destination") or "N/A",
                 "assignedVehicleId": vehicle.get("id"),
-                "assignedVehicleName": vehicle.get("vehicleName", "N/A"),
+                "assignedVehicleName": vehicle.get("vehicle_name") or vehicle.get("vehicleName") or vehicle.get("registration_number") or vehicle.get("registrationNumber") or "N/A",
                 "assignedDriverId": driver.get("id"),
-                "assignedDriverName": driver.get("fullName", "N/A"),
+                "assignedDriverName": driver.get("fullName") or "N/A",
                 "recommendationReason": "Smart matching fallback (Mock Mode - set OPENAI_API_KEY for dynamic AI matching)."
             })
         return {"assignments": assignments, "mock": True}
