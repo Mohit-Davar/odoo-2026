@@ -77,6 +77,7 @@ CREATE TABLE trips
         planned_distance_km    NUMERIC(10, 2) NOT NULL CHECK (planned_distance_km >= 0),
         start_odometer_km      NUMERIC(12, 2)                                          ,
         end_odometer_km        NUMERIC(12, 2)                                          ,
+        revenue                NUMERIC(14, 2) NOT NULL DEFAULT 0 CHECK (revenue >= 0)  ,
         status trip_status NOT NULL DEFAULT 'DRAFT'                                    ,
         dispatched_at          TIMESTAMP                                               ,
         completed_at           TIMESTAMP                                               ,
