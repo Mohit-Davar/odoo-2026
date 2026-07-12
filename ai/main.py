@@ -7,6 +7,10 @@ from typing import List, Optional
 import google.generativeai as genai
 from dotenv import load_dotenv
 
+# Import tools and the executor
+from tools import ALL_TOOLS
+from mcp_server import execute_tool
+
 # Load environment variables
 load_dotenv()
 
@@ -14,8 +18,8 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
-    # Using the recommended fast model
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    # Register our MCP tools directly with the model
+    model = genai.GenerativeModel('gemini-1.5-flash', tools=ALL_TOOLS)
 else:
     model = None
 
@@ -43,7 +47,8 @@ class OptimizationRequest(BaseModel):
 def read_root():
     return {
         "status": "TransitOps AI Server is running", 
-        "gemini_enabled": model is not None
+        "gemini_enabled": model is not None,
+        "tools_registered": [t.__name__ for t in ALL_TOOLS]
     }
 
 @app.post("/api/ai/chat")
@@ -55,29 +60,56 @@ async def chat(request: ChatRequest):
         }
     
     try:
-        # Build prompt context
-        prompt = (
-            "System: You are an expert logistics assistant for TransitOps, a smart fleet management platform. "
-            "Help the user analyze route logs, check vehicle availability, and schedule drivers intelligently.\n\n"
-        )
-        
-        # Merge chat history
+        # Map conversation history to Gemini structure
+        history = []
         for turn in request.history:
             role = turn.get("role", "user")
             content = turn.get("content", "")
-            prompt += f"{role.capitalize()}: {content}\n"
+            gemini_role = "model" if role == "assistant" else "user"
+            history.append({"role": gemini_role, "parts": [content]})
             
-        prompt += f"User: {request.message}\nAssistant:"
+        # Start the chat session
+        chat_session = model.start_chat(history=history)
         
-        response = model.generate_content(prompt)
-        return {"reply": response.text, "mock": False}
+        # Send user query
+        response = chat_session.send_message(request.message)
+        
+        # Handle iterative tool calling loops
+        loop_count = 0
+        while response.function_calls and loop_count < 10:
+            loop_count += 1
+            for call in response.function_calls:
+                tool_name = call.name
+                tool_args = dict(call.args)
+                
+                print(f"[AI Agent] Gemini called tool: {tool_name} with args: {tool_args}")
+                
+                # Execute the matched tool
+                result_json = await execute_tool(tool_name, tool_args)
+                
+                # Send tool output back to the model context
+                response = chat_session.send_message(
+                    genai.protos.Part(
+                        function_response=genai.protos.FunctionResponse(
+                            name=tool_name,
+                            response={'result': result_json}
+                        )
+                    )
+                )
+                
+        return {
+            "reply": response.text,
+            "mock": False
+        }
+        
     except Exception as e:
+        print(f"[AI Agent] Chat Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"LLM Chat Error: {str(e)}")
 
 @app.post("/api/ai/optimize-dispatch")
 async def optimize_dispatch(request: OptimizationRequest):
+    # Keep optimization endpoint separate for custom batch calls
     if not model:
-        # Smart round-robin mock optimization fallback
         assignments = []
         for i, trip in enumerate(request.trips):
             vehicle = request.vehicles[i % len(request.vehicles)] if request.vehicles else {"id": "None", "registrationNumber": "N/A"}
@@ -126,7 +158,6 @@ async def optimize_dispatch(request: OptimizationRequest):
         response = model.generate_content(prompt)
         text = response.text.strip()
         
-        # Strip markdown syntax formatting if present
         if text.startswith("```json"):
             text = text[7:]
         if text.endswith("```"):
