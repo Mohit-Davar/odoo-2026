@@ -1,4 +1,4 @@
-import { findUserById } from "../models/User.js";
+import { findUserById } from "../models/user.model.js";
 
 export const getProfile = async(req , res)=>{
     try{

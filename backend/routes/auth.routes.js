@@ -1,7 +1,7 @@
 import express from "express"
-import { register,login , refresh ,verifyLoginOtp,verifyRegisterOtp, logout, resendOtp, getOtpCooldown } from "../controllers/authController.js";
+import { register,login , refresh ,verifyLoginOtp,verifyRegisterOtp, logout, resendOtp, getOtpCooldown } from "../controllers/auth.controller.js";
 import { verifyAccessToken } from "../middleware/auth.js";
-import { getProfile } from "../controllers/userController.js";
+import { getProfile } from "../controllers/user.controller.js";
 const router = express.Router();
 
 router.post("/register",register);

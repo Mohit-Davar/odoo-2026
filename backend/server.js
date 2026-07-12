@@ -2,7 +2,8 @@ import cookieParser from "cookie-parser";
 import express from "express"
 import connectDB from "./config/db.js";
 import cors from "cors"
-import router from "./routes/authRoutes.js";
+import router from "./routes/auth.routes.js";
+import vehicleRouter from "./routes/vehicle.route.js";
 
 const app = express();
 
@@ -16,7 +17,8 @@ app.use(cookieParser());
 
 connectDB();
 
-app.use("/api/auth",router);
+app.use("/api/auth", router);
+app.use("/api/vehicles", vehicleRouter);
 
 app.get("/",(req , res)=>{
     res.json({

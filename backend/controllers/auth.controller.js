@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt"
 import { sendOtpEmail } from "../utils/mailer.js";
 import { generateOtp , canSendOtp ,saveOtpToRedis , verifyOtpFromRedis } from "../utils/otp.js";
-import { findUserByEmail, createUser, updateUser, findUserById, findUserByRefreshToken } from "../models/User.js";
+import { findUserByEmail, createUser, updateUser, findUserById, findUserByRefreshToken } from "../models/user.model.js";
 import client from "../config/redis.js";
 
 const generateAccessToken = (user)=>{
