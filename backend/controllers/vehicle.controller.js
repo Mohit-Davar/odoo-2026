@@ -22,29 +22,30 @@ export const registerVehicle = async (req, res) => {
             status
         } = req.body;
 
-        // Validation
-        if (!registrationNumber || !vehicleName || !vehicleType || maxLoadCapacityKg === undefined || acquisitionCost === undefined) {
-            return res.status(400).json({
-                msg: "registrationNumber, vehicleName, vehicleType, maxLoadCapacityKg, and acquisitionCost are required fields."
-            });
+        // Thorough validation checks
+        if (!registrationNumber || typeof registrationNumber !== 'string' || !registrationNumber.trim()) {
+            return res.status(400).json({ msg: "registrationNumber must be a non-empty string." });
         }
-
-        if (maxLoadCapacityKg <= 0) {
-            return res.status(400).json({
-                msg: "Max load capacity must be greater than 0."
-            });
+        if (!vehicleName || typeof vehicleName !== 'string' || !vehicleName.trim()) {
+            return res.status(400).json({ msg: "vehicleName must be a non-empty string." });
         }
-
-        if (acquisitionCost < 0) {
-            return res.status(400).json({
-                msg: "Acquisition cost cannot be negative."
-            });
+        if (!vehicleType || typeof vehicleType !== 'string' || !vehicleType.trim()) {
+            return res.status(400).json({ msg: "vehicleType must be a non-empty string." });
         }
-
-        if (odometerKm !== undefined && odometerKm < 0) {
-            return res.status(400).json({
-                msg: "Odometer reading cannot be negative."
-            });
+        if (maxLoadCapacityKg === undefined || maxLoadCapacityKg === null || typeof maxLoadCapacityKg !== 'number' || isNaN(maxLoadCapacityKg) || maxLoadCapacityKg <= 0) {
+            return res.status(400).json({ msg: "maxLoadCapacityKg must be a positive number." });
+        }
+        if (acquisitionCost === undefined || acquisitionCost === null || typeof acquisitionCost !== 'number' || isNaN(acquisitionCost) || acquisitionCost < 0) {
+            return res.status(400).json({ msg: "acquisitionCost must be a non-negative number." });
+        }
+        if (odometerKm !== undefined && odometerKm !== null && (typeof odometerKm !== 'number' || isNaN(odometerKm) || odometerKm < 0)) {
+            return res.status(400).json({ msg: "odometerKm must be a non-negative number." });
+        }
+        
+        const validStatuses = ['AVAILABLE', 'ON_TRIP', 'IN_SHOP', 'RETIRED'];
+        const formattedStatus = status ? status.toUpperCase() : 'AVAILABLE';
+        if (status && !validStatuses.includes(formattedStatus)) {
+            return res.status(400).json({ msg: `status must be one of: ${validStatuses.join(', ')}` });
         }
 
         // Check if registration number already exists
@@ -62,7 +63,7 @@ export const registerVehicle = async (req, res) => {
             maxLoadCapacityKg,
             odometerKm,
             acquisitionCost,
-            status
+            status: formattedStatus
         });
 
         res.status(201).json({
@@ -137,31 +138,38 @@ export const updateVehicleDetails = async (req, res) => {
         } = req.body;
 
         // Validation for update payload
-        const updatedRegNumber = registrationNumber || existingVehicle.registrationNumber;
-        const updatedVehicleName = vehicleName || existingVehicle.vehicleName;
-        const updatedVehicleType = vehicleType || existingVehicle.vehicleType;
+        if (registrationNumber !== undefined && (typeof registrationNumber !== 'string' || !registrationNumber.trim())) {
+            return res.status(400).json({ msg: "registrationNumber must be a non-empty string." });
+        }
+        if (vehicleName !== undefined && (typeof vehicleName !== 'string' || !vehicleName.trim())) {
+            return res.status(400).json({ msg: "vehicleName must be a non-empty string." });
+        }
+        if (vehicleType !== undefined && (typeof vehicleType !== 'string' || !vehicleType.trim())) {
+            return res.status(400).json({ msg: "vehicleType must be a non-empty string." });
+        }
+        if (maxLoadCapacityKg !== undefined && (typeof maxLoadCapacityKg !== 'number' || isNaN(maxLoadCapacityKg) || maxLoadCapacityKg <= 0)) {
+            return res.status(400).json({ msg: "maxLoadCapacityKg must be a positive number." });
+        }
+        if (acquisitionCost !== undefined && (typeof acquisitionCost !== 'number' || isNaN(acquisitionCost) || acquisitionCost < 0)) {
+            return res.status(400).json({ msg: "acquisitionCost must be a non-negative number." });
+        }
+        if (odometerKm !== undefined && (typeof odometerKm !== 'number' || isNaN(odometerKm) || odometerKm < 0)) {
+            return res.status(400).json({ msg: "odometerKm must be a non-negative number." });
+        }
+        
+        const validStatuses = ['AVAILABLE', 'ON_TRIP', 'IN_SHOP', 'RETIRED'];
+        const formattedStatus = status ? status.toUpperCase() : undefined;
+        if (status !== undefined && (!formattedStatus || !validStatuses.includes(formattedStatus))) {
+            return res.status(400).json({ msg: `status must be one of: ${validStatuses.join(', ')}` });
+        }
+
+        const updatedRegNumber = registrationNumber ? registrationNumber.trim() : existingVehicle.registrationNumber;
+        const updatedVehicleName = vehicleName ? vehicleName.trim() : existingVehicle.vehicleName;
+        const updatedVehicleType = vehicleType ? vehicleType.trim() : existingVehicle.vehicleType;
         const updatedMaxLoad = maxLoadCapacityKg !== undefined ? maxLoadCapacityKg : existingVehicle.maxLoadCapacityKg;
         const updatedOdometer = odometerKm !== undefined ? odometerKm : existingVehicle.odometerKm;
         const updatedCost = acquisitionCost !== undefined ? acquisitionCost : existingVehicle.acquisitionCost;
-        const updatedStatus = status || existingVehicle.status;
-
-        if (updatedMaxLoad <= 0) {
-            return res.status(400).json({
-                msg: "Max load capacity must be greater than 0."
-            });
-        }
-
-        if (updatedCost < 0) {
-            return res.status(400).json({
-                msg: "Acquisition cost cannot be negative."
-            });
-        }
-
-        if (updatedOdometer < 0) {
-            return res.status(400).json({
-                msg: "Odometer reading cannot be negative."
-            });
-        }
+        const updatedStatus = formattedStatus || existingVehicle.status;
 
         // Check if the registration number changed and is already taken by another vehicle
         if (registrationNumber && registrationNumber !== existingVehicle.registrationNumber) {
