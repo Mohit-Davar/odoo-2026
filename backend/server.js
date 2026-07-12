@@ -17,7 +17,8 @@ app.use(cookieParser());
 
 connectDB();
 
-app.use("/api/auth", authRoutes);
+app.use("/api/auth", router);
+app.use("/api/vehicles", vehicleRouter);
 app.use("/api/admin", adminRoutes);
 
 app.get("/",(req , res)=>{
