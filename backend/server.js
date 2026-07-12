@@ -7,6 +7,7 @@ import adminRoutes from "./routes/admin.routes.js";
 import vehicleRouter from "./routes/vehicle.route.js";
 import driverRouter from "./routes/driver.route.js";
 import tripRoutes from "./routes/trip.routes.js";
+import maintenanceRoutes from "./routes/maintenance.route.js";
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use("/api/vehicles", vehicleRouter);
 app.use("/api/drivers", driverRouter);
 app.use("/api/admin", adminRoutes);
 app.use("/api/trips", tripRoutes);
+app.use('/api/maintenance', maintenanceRoutes);
 
 app.get("/",(req , res)=>{
     res.json({
